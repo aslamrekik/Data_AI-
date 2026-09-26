@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+parte2_relatorio/logs/*
+!parte2_relatorio/logs/.gitkeep
+parte2_relatorio/output/*
+!parte2_relatorio/output/.gitkeep
