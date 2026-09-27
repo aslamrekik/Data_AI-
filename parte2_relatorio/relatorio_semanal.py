@@ -66,25 +66,38 @@ def semana_referencia(df: pd.DataFrame, referencia: str | None) -> tuple[pd.Time
         ultimo = df["data_entrada"].max()
         dia = ultimo - timedelta(days=7) if ultimo.weekday() < 6 else ultimo  # última semana COMPLETA
     inicio = (dia - timedelta(days=dia.weekday())).normalize()
-    return inicio, inicio + timedelta(days=6)
+    fim = inicio + timedelta(days=6)
+    primeira, ultima = df["data_entrada"].min(), df["data_entrada"].max()
+    if pd.isna(ultima):
+        raise ValueError("nenhuma data de entrada válida na base")
+    # Semana sem cobertura completa gera KPIs zerados ou quedas falsas: melhor falhar
+    if inicio < primeira.normalize() or fim > ultima.normalize():
+        raise ValueError(f"semana {inicio:%d/%m/%Y}–{fim:%d/%m/%Y} fora da base ou incompleta "
+                         f"(entradas de {primeira:%d/%m/%Y} a {ultima:%d/%m/%Y})")
+    return inicio, fim
 
 
 def calcular(df: pd.DataFrame, inicio: pd.Timestamp, fim: pd.Timestamp) -> dict:
     b = t.base_analise(df).copy()
     fim_dia = fim + timedelta(days=1)
     semana = lambda col: b[(b[col] >= inicio) & (b[col] < fim_dia)]
-    anteriores = lambda col: b[(b[col] >= inicio - timedelta(weeks=4)) & (b[col] < inicio)]
+    # Comparação com até 4 semanas anteriores, só as que a base cobre por inteiro: no início
+    # da base, dividir por 4 com uma semana e meia de dados inventa altas de centenas de %.
+    primeira = b["data_entrada"].min().normalize()
+    n_hist = sum(1 for w in range(1, 5) if inicio - timedelta(weeks=w) >= primeira)
+    anteriores = lambda col: b[(b[col] >= inicio - timedelta(weeks=n_hist)) & (b[col] < inicio)]
+    media = lambda total: total / n_hist if n_hist else float("nan")
 
-    entradas, entradas_4s = semana("data_entrada"), anteriores("data_entrada")
-    assinados, assinados_4s = semana("data_assinatura_contrato"), anteriores("data_assinatura_contrato")
+    entradas, entradas_ant = semana("data_entrada"), anteriores("data_entrada")
+    assinados, assinados_ant = semana("data_assinatura_contrato"), anteriores("data_assinatura_contrato")
 
     kpis = {
-        "Propostas que entraram": (len(entradas), len(entradas_4s) / 4, "{:,.0f}"),
-        "Contratos assinados": (len(assinados), len(assinados_4s) / 4, "{:,.0f}"),
+        "Propostas que entraram": (len(entradas), media(len(entradas_ant)), "{:,.0f}"),
+        "Contratos assinados": (len(assinados), media(len(assinados_ant)), "{:,.0f}"),
         "Valor contratado (R$ mi)": (assinados["valor_solicitado"].sum() / 1e6,
-                                     assinados_4s["valor_solicitado"].sum() / 4e6, "{:,.1f}"),
+                                     media(assinados_ant["valor_solicitado"].sum() / 1e6), "{:,.1f}"),
         "Contratos acima da política de LTV": (int((assinados["ltv"] > t.LIMITE_LTV_POLITICA).sum()),
-                                               (assinados_4s["ltv"] > t.LIMITE_LTV_POLITICA).sum() / 4, "{:,.0f}"),
+                                               media((assinados_ant["ltv"] > t.LIMITE_LTV_POLITICA).sum()), "{:,.0f}"),
     }
 
     # Conversão só em coortes MADURAS: propostas recentes ainda não tiveram tempo de fechar
@@ -99,7 +112,7 @@ def calcular(df: pd.DataFrame, inicio: pd.Timestamp, fim: pd.Timestamp) -> dict:
 
     semanal = (b.set_index("data_entrada").resample("W-SUN")["id_proposta"].count()
                .loc[:fim].tail(12))
-    return dict(kpis=kpis, conv_canal=conv_canal, perdas=perdas, semanal=semanal,
+    return dict(kpis=kpis, n_hist=n_hist, conv_canal=conv_canal, perdas=perdas, semanal=semanal,
                 janela_madura=(corte - timedelta(days=90), corte),
                 conv_madura=madura["contratada"].mean() if len(madura) else float("nan"),
                 n_madura=len(madura))
@@ -115,6 +128,11 @@ def _grafico_png(fig) -> str:
     return base64.b64encode(buf.getvalue()).decode()
 
 
+def rotulos_semana(indice: pd.DatetimeIndex) -> list[str]:
+    """resample('W-SUN') rotula pelo domingo; o relatório identifica a semana pela segunda."""
+    return [(d - timedelta(days=6)).strftime("%d/%m") for d in indice]
+
+
 def _br(v: float, fmt: str) -> str:
     return fmt.format(v).replace(",", "X").replace(".", ",").replace("X", ".")
 
@@ -125,23 +143,30 @@ def gerar_html(m: dict, reg_df: pd.DataFrame, inicio, fim, arquivo: str, n_linha
         delta = (atual - media) / media if media else float("nan")
         seta = "" if pd.isna(delta) else ("▲" if delta >= 0 else "▼")
         cor = "#b42318" if "acima da política" in nome and atual > 0 else "#1f4e8c"
-        var = "" if pd.isna(delta) else f"{seta} {_br(abs(delta) * 100, '{:,.0f}')}% vs média das 4 semanas anteriores"
+        n = m["n_hist"]
+        base_cmp = "a semana anterior" if n == 1 else f"a média das {n} semanas anteriores"
+        var = "sem semanas anteriores na base para comparar" if pd.isna(delta) and not n else \
+            ("" if pd.isna(delta) else f"{seta} {_br(abs(delta) * 100, '{:,.0f}')}% vs {base_cmp}")
         cards.append(f'<div class="card"><div class="rot">{nome}</div>'
                      f'<div class="num" style="color:{cor}">{_br(atual, fmt)}</div>'
                      f'<div class="var">{var}</div></div>')
 
     fig, ax = plt.subplots(figsize=(8, 3))
     s = m["semanal"]
-    ax.bar(s.index.strftime("%d/%m"), s.values, color=["#1f4e8c" if i == len(s) - 1 else "#c7d4e8" for i in range(len(s))])
-    ax.set_title("Propostas que entraram por semana (últimas 12)"); ax.spines[["top", "right"]].set_visible(False)
+    ax.bar(rotulos_semana(s.index), s.values,
+           color=["#1f4e8c" if d.normalize() == fim.normalize() else "#c7d4e8" for d in s.index])
+    ax.set_title("Propostas que entraram por semana (últimas 12, rótulo = segunda-feira)")
+    ax.spines[["top", "right"]].set_visible(False)
     graf_volume = _grafico_png(fig)
 
     cc = m["conv_canal"]
-    fig, ax = plt.subplots(figsize=(8, 3))
-    ax.barh(cc.index, cc["conversão"] * 100, color="#1f4e8c")
-    ax.set_xlabel("Conversão (%)"); ax.spines[["top", "right"]].set_visible(False)
-    ax.set_title("Conversão por canal (coortes maduras)")
-    graf_canal = _grafico_png(fig)
+    graf_canal = ""
+    if m["n_madura"]:
+        fig, ax = plt.subplots(figsize=(8, 3))
+        ax.barh(cc.index, cc["conversão"] * 100, color="#1f4e8c")
+        ax.set_xlabel("Conversão (%)"); ax.spines[["top", "right"]].set_visible(False)
+        ax.set_title("Conversão por canal (coortes maduras)")
+        graf_canal = _grafico_png(fig)
 
     perdas = m["perdas"].assign(valor=lambda d: d["valor"].map(lambda v: "R$ " + _br(v / 1e6, "{:,.1f}") + " mi"))
     linhas_perda = "".join(f"<tr><td>{i}</td><td>{r.propostas}</td><td>{r.valor}</td></tr>"
@@ -150,6 +175,18 @@ def gerar_html(m: dict, reg_df: pd.DataFrame, inicio, fim, arquivo: str, n_linha
     linhas_dq = "".join(f"<tr><td>{r.problema}</td><td>{r.linhas_afetadas}</td><td>{r.acao}</td></tr>"
                         for r in problemas.itertuples())
     j0, j1 = m["janela_madura"]
+    if m["n_madura"]:
+        bloco_conv = (f'<p class="nota">Coortes que entraram entre {j0:%d/%m/%Y} e {j1:%d/%m/%Y} '
+                      f'({_br(m["n_madura"], "{:,.0f}")} propostas, conversão geral de '
+                      f'{_br(m["conv_madura"] * 100, "{:,.1f}")}%). Propostas com menos de {MATURACAO_DIAS} '
+                      f'dias ainda podem fechar e ficam de fora.</p>\n'
+                      f'<img src="data:image/png;base64,{graf_canal}" alt="Conversão por canal">')
+        tabela_perda = (f'<table><tr><th>Status final</th><th>Propostas</th><th>Crédito solicitado</th></tr>'
+                        f'{linhas_perda}</table>')
+    else:
+        bloco_conv = (f'<p class="nota">Ainda não há coortes maduras nesta base: a conversão só é medida '
+                      f'para propostas com mais de {MATURACAO_DIAS} dias (entrada até {j1:%d/%m/%Y}).</p>')
+        tabela_perda = '<p class="nota">Sem coortes maduras para analisar.</p>'
 
     return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -165,15 +202,13 @@ def gerar_html(m: dict, reg_df: pd.DataFrame, inicio, fim, arquivo: str, n_linha
 </style></head><body>
 <h1>Relatório semanal do funil de propostas</h1>
 <div class="sub">Semana de {inicio:%d/%m/%Y} a {fim:%d/%m/%Y} · gerado em {datetime.now():%d/%m/%Y %H:%M} ·
-fonte: {arquivo} ({n_linhas:,} propostas, nenhuma removida)</div>
+fonte: {arquivo} ({_br(n_linhas, "{:,.0f}")} propostas, nenhuma removida)</div>
 <div class="cards">{''.join(cards)}</div>
 <h2>Volume de entrada</h2><img src="data:image/png;base64,{graf_volume}" alt="Volume semanal">
 <h2>Conversão por canal</h2>
-<p class="nota">Coortes que entraram entre {j0:%d/%m/%Y} e {j1:%d/%m/%Y} ({m['n_madura']} propostas, conversão geral de
-{_br(m['conv_madura'] * 100, '{:,.1f}')}%). Propostas com menos de {MATURACAO_DIAS} dias ainda podem fechar e ficam de fora.</p>
-<img src="data:image/png;base64,{graf_canal}" alt="Conversão por canal">
+{bloco_conv}
 <h2>Onde as propostas se perderam (mesmas coortes)</h2>
-<table><tr><th>Status final</th><th>Propostas</th><th>Crédito solicitado</th></tr>{linhas_perda}</table>
+{tabela_perda}
 <h2>Qualidade dos dados desta execução</h2>
 <table><tr><th>Problema</th><th>Linhas</th><th>Ação</th></tr>{linhas_dq}</table>
 <p class="nota">Registro completo no log da execução. Nenhuma linha é descartada: problemas viram correção documentada ou sinalização.</p>
@@ -194,7 +229,7 @@ def executar(entrada: Path, referencia: str | None) -> Path:
     log.info("Semana de referência: %s a %s", inicio.date(), fim.date())
     m = calcular(df, inicio, fim)
     for nome, (atual, media, _) in m["kpis"].items():
-        log.info("KPI %-38s semana=%.1f média_4s=%.1f", nome, atual, media)
+        log.info("KPI %-38s semana=%.1f média_%ds=%.1f", nome, atual, m["n_hist"], media)
     (DIR / "output").mkdir(parents=True, exist_ok=True)
     destino = DIR / "output" / f"relatorio_funil_{inicio:%Y-%m-%d}.html"
     destino.write_text(gerar_html(m, reg_df, inicio, fim, entrada.name, len(df)), encoding="utf-8")
