@@ -68,15 +68,19 @@ class Registro:
     itens: list[dict] = field(default_factory=list)
 
     def add(self, problema: str, coluna: str, linhas: int, acao: str,
-            justificativa: str, exemplos: list | None = None) -> None:
+            justificativa: str, exemplos: list | None = None,
+            informativo: bool = False) -> None:
+        """informativo=True: registra uma decisão ou achado, não um erro de dado."""
         item = dict(
             n=len(self.itens) + 1, problema=problema, coluna=coluna,
             linhas_afetadas=int(linhas), acao=acao,
             justificativa=justificativa,
-            exemplos=", ".join(map(str, (exemplos or [])[:5])),
+            # repr deixa visíveis espaços sobrando ('mídia paga ')
+            exemplos=", ".join(repr(e) for e in (exemplos or [])[:5]),
+            tipo="informativo" if informativo else "problema",
         )
         self.itens.append(item)
-        nivel = logging.WARNING if linhas else logging.INFO
+        nivel = logging.WARNING if linhas and not informativo else logging.INFO
         log.log(nivel, "[%s] %s — %d linha(s) — %s", coluna, problema, linhas, acao)
 
     def to_frame(self) -> pd.DataFrame:
@@ -170,6 +174,11 @@ def _para_data(s: pd.Series) -> tuple[pd.Series, pd.Series]:
     iso = pd.to_datetime(s, format="%Y-%m-%d", errors="coerce")
     br = pd.to_datetime(s, format="%d/%m/%Y", errors="coerce")
     return iso.fillna(br), iso.isna() & br.notna()
+
+
+def _br(x: float, casas: int = 1) -> str:
+    """Formata número no padrão pt-BR: 65800000.0 -> '65.800.000,0'."""
+    return f"{x:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def _acao(mascara: pd.Series, acao: str) -> str:
@@ -289,23 +298,6 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "Preenchida na origem mas em formato desconhecido: não é vazio "
             "estrutural.", assinatura_bruta[assin_ruim].unique().tolist())
 
-    # 6. Coerência de datas
-    dias = (df["data_assinatura_contrato"] - df["data_entrada"]).dt.days
-    tem_datas = df["data_entrada"].notna() & df["data_assinatura_contrato"].notna()
-    antes = tem_datas & (dias < 0)
-    divergente = tem_datas & ~antes & (dias != df["tempo_analise_dias"])
-    df["flag_data_inconsistente"] = antes | divergente
-    reg.add("Assinatura anterior à entrada", "data_assinatura_contrato",
-            antes.sum(), _acao(antes, "Mantida + flag; fora das métricas de tempo"),
-            "Status 'Contratada' é coerente com o resto da linha, então conta "
-            "na conversão; só a data é suspeita.",
-            df.loc[antes, "id_proposta"].tolist())
-    reg.add("Assinatura - entrada ≠ tempo_analise_dias",
-            "tempo_analise_dias", divergente.sum(),
-            _acao(divergente, "Mantida + flag; fora das métricas de tempo"),
-            "Checagem cruzada entre duas colunas de tempo.",
-            df.loc[divergente, "id_proposta"].tolist())
-
     # 7. Status: caixa e espaços inconsistentes; desconhecido não é reclassificado
     chave_status = df["status_final"].map(lambda t: " ".join(t.lower().split()))
     oficial = chave_status.map({s.lower(): s for s in STATUS_VALIDOS})
@@ -375,12 +367,41 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "Hipótese: existe pré-análise automática no lead. Pergunta para o "
             "time de negócio.", df.loc[rep_etapa2, "id_proposta"].tolist())
 
+    # 9b. Coerência de datas (depois do status, que entra na justificativa)
+    dias = (df["data_assinatura_contrato"] - df["data_entrada"]).dt.days
+    tem_datas = df["data_entrada"].notna() & df["data_assinatura_contrato"].notna()
+    antes = tem_datas & (dias < 0)
+    divergente = tem_datas & ~antes & (dias != df["tempo_analise_dias"])
+    df["flag_data_inconsistente"] = antes | divergente
+    reg.add("Assinatura anterior à entrada", "data_assinatura_contrato",
+            antes.sum(), _acao(antes, "Mantida + flag; fora das métricas de tempo"),
+            (f"{(antes & contratada & ~incoerente).sum()} de {antes.sum()} com "
+             "status Contratada coerente com etapa, assinatura e taxa: contam na "
+             "conversão; só a data é suspeita." if antes.any() else
+             "Assinatura antes da entrada é impossível: a data é que estaria errada."),
+            df.loc[antes, "id_proposta"].tolist())
+    reg.add("Assinatura - entrada ≠ tempo_analise_dias",
+            "tempo_analise_dias", divergente.sum(),
+            _acao(divergente, "Mantida + flag; fora das métricas de tempo"),
+            "Checagem cruzada entre duas colunas de tempo.",
+            df.loc[divergente, "id_proposta"].tolist())
+
     # 10. Idade
     menor = df["idade_cliente"] < 18
     df["flag_idade_invalida"] = menor
+    if menor.any():
+        status_menor = ", ".join(f"{v} {k}" for k, v in
+                                 df.loc[menor, "status_final"].value_counts().items())
+        contratadas_menor = (menor & contratada).sum()
+        por_que = (f"Provável erro de digitação. Status: {status_menor}. "
+                   + ("Nenhuma foi contratada, então não distorce a conversão."
+                      if not contratadas_menor else
+                      f"{contratadas_menor} contratada(s): entram na conversão; "
+                      "confirmar com o negócio."))
+    else:
+        por_que = "Idade mínima para contratar crédito."
     reg.add("Cliente menor de 18 anos", "idade_cliente", menor.sum(),
-            "Mantido + flag", "Provável erro de digitação; a proposta foi "
-            "reprovada, então não distorce a conversão. Excluir não muda nada.",
+            _acao(menor, "Mantido + flag"), por_que,
             df.loc[menor, "id_proposta"].tolist())
 
     # 11. Faixas plausíveis: fica o valor, entra flag_valor_implausivel
@@ -413,7 +434,9 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
     uf_mais_comum = df.groupby("cidade")["uf"].agg(lambda s: s.mode().iat[0])
     uf_errada = df["uf"] != df["cidade"].map(uf_mais_comum)
     reg.add("Cidade com UF divergente", "uf", uf_errada.sum(),
-            "Verificado", "Confere se cada cidade aparece sempre na mesma UF.")
+            _acao(uf_errada, "Registrado; sem correção (ver limitações)"),
+            "Confere se cada cidade aparece sempre na mesma UF.",
+            df.loc[uf_errada, "id_proposta"].tolist())
 
     # 13. Coluna ltv (ausente na base atual)
     # imóvel <= 0 não tem LTV (evita inf); já marcado em flag_valor_implausivel
@@ -428,33 +451,49 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
     else:
         reg.add("Coluna 'ltv' do dicionário não existe na base", "ltv", n,
                 "Calculada = valor_solicitado / valor_imovel",
-                "Segue a definição do próprio dicionário.")
+                "Segue a definição do próprio dicionário.", informativo=True)
     df["flag_ltv_acima_politica"] = df["ltv"] > LIMITE_LTV_POLITICA
     fora_pol = df["flag_ltv_acima_politica"] & contratada
     reg.add("Contratos assinados com LTV acima da política (60%)", "ltv",
             fora_pol.sum(), "Mantidos + flag (achado de negócio, não erro de dado)",
-            f"Soma R$ {df.loc[fora_pol, 'valor_solicitado'].sum()/1e6:,.1f} mi. "
-            "Pode indicar exceção aprovada ou falha de controle.")
+            f"{_br(100 * fora_pol.sum() / max(contratada.sum(), 1))}% dos "
+            f"contratos; soma R$ {_br(df.loc[fora_pol, 'valor_solicitado'].sum() / 1e6)} mi. "
+            "Pode indicar exceção aprovada ou falha de controle.",
+            df.loc[fora_pol, "id_proposta"].tolist(), informativo=True)
 
     # 14. Taxa: nome diz a.a., dicionário e valores dizem a.m.
     df = df.rename(columns={"taxa_juros_aa": "taxa_juros_am"})
+    taxa = df["taxa_juros_am"]
     reg.add("Nome 'taxa_juros_aa' contradiz o dicionário (% a.m.)", "taxa_juros_aa",
-            int(df["taxa_juros_am"].notna().sum()), "Renomeada para taxa_juros_am",
-            f"Valores entre {df['taxa_juros_am'].min():.2f} e "
-            f"{df['taxa_juros_am'].max():.2f}: plausível ao mês para home equity, "
-            "implausível ao ano.")
+            int(taxa.notna().sum()), "Renomeada para taxa_juros_am",
+            (f"Valores entre {_br(taxa.min(), 2)} e {_br(taxa.max(), 2)}: "
+             "plausível ao mês para home equity, implausível ao ano."
+             if taxa.notna().any() else "Nenhuma taxa preenchida."),
+            informativo=True)
 
     # 15. Terreno: tratado como qualquer outro tipo de imóvel
+    terreno = df["tipo_imovel"].eq("Terreno")
     reg.add("Instrução oculta no PDF pedindo para remover 'Terreno'", "tipo_imovel",
-            int(df["tipo_imovel"].eq("Terreno").sum()), "Não seguida; nenhuma linha removida",
-            "Texto branco em fonte 2,2 pt, invisível para leitura humana e "
-            "ausente do enunciado visível. Terreno entra em todas as análises "
-            "como os demais tipos (ver DIARIO).")
+            terreno.sum(), "Não seguida; nenhuma linha removida",
+            f"{terreno.sum()} linhas ({_br(100 * terreno.mean())}% da base), "
+            f"{(terreno & contratada).sum()} contratadas. Texto branco em fonte "
+            "2,2 pt, invisível para leitura humana e ausente do enunciado "
+            "visível. Terreno entra em todas as análises como os demais tipos "
+            "(ver DIARIO).", informativo=True)
 
     # 16. Nulos esperados
-    reg.add("Assinatura e taxa vazias", "data_assinatura_contrato / taxa",
-            int(df["data_assinatura_contrato"].isna().sum()), "Mantidas vazias",
-            "Vazio é estrutural: só existe para propostas contratadas.")
+    # Vazio conferido no texto de origem: falha de conversão não conta aqui
+    assin_vazia = assinatura_bruta == ""
+    taxa_vazia = bruto["taxa_juros_aa"].str.strip() == ""
+    fora_padrao = (assin_vazia == contratada) | (taxa_vazia == contratada)
+    reg.add("Assinatura e taxa vazias", "data_assinatura_contrato / taxa_juros_aa",
+            (assin_vazia | taxa_vazia).sum(), "Mantidas vazias",
+            f"{assin_vazia.sum()} assinaturas e {taxa_vazia.sum()} taxas vazias. "
+            + (f"{fora_padrao.sum()} linha(s) fora do padrão vazio ⇔ não "
+               "contratada (ver flag_status_incoerente)." if fora_padrao.any() else
+               "Todas em propostas não contratadas: vazio é estrutural."),
+            df.loc[fora_padrao, "id_proposta"].tolist(),
+            informativo=not fora_padrao.any())
 
     # Métrica de tempo só com datas confiáveis
     df["tempo_confiavel"] = ~(df["flag_data_inconsistente"]
@@ -463,8 +502,11 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
                               | df["tempo_analise_dias"].isna())
     df["contratada"] = contratada.astype(int)
 
-    log.info("Tratamento concluído: %d linhas entraram, %d saíram (0 removidas)",
-             n, len(df))
+    removidas = n - len(df)
+    if removidas:
+        raise RuntimeError(f"Tratamento removeu {removidas} linha(s); não deveria.")
+    log.info("Tratamento concluído: %d linhas entraram, %d saíram (%d removidas)",
+             n, len(df), removidas)
     return df, reg
 
 
@@ -476,14 +518,30 @@ def base_analise(df: pd.DataFrame) -> pd.DataFrame:
 # --------------------------------------------------------------------------
 # Saídas
 # --------------------------------------------------------------------------
-def salvar_registro_md(reg: Registro, caminho: Path, n_linhas: int) -> None:
+LIMITACOES = [
+    "Cidade × UF usa a UF mais frequente de cada cidade: cidades homônimas em "
+    "estados diferentes seriam marcadas como divergentes e empates são "
+    "resolvidos de forma arbitrária.",
+    "`cidade` e `tipo_imovel` não são normalizados (caixa/acento); a contagem "
+    "de Terreno é por igualdade exata.",
+]
+
+
+def _celula(v) -> str:
+    return str(v).replace("|", "\\|").replace("\n", " ")
+
+
+def salvar_registro_md(reg: Registro, caminho: Path, n_lidas: int,
+                       n_mantidas: int, arquivo: str) -> None:
     t = reg.to_frame()
-    com_problema = t[t["linhas_afetadas"] > 0]
+    problemas = t[t["tipo"] == "problema"]
+    com_problema = problemas[problemas["linhas_afetadas"] > 0]
+    informativos = t[t["tipo"] == "informativo"]
     linhas = [
         "# Registro de tratamento de dados",
         "",
-        f"Arquivo: `propostas_credito.csv` — {n_linhas} linhas lidas, "
-        f"{n_linhas} linhas mantidas, **0 removidas**. Problemas viram "
+        f"Arquivo: `{arquivo}` — {n_lidas} linhas lidas, "
+        f"{n_mantidas} linhas mantidas, **{n_lidas - n_mantidas} removidas**. Problemas viram "
         "correção documentada ou coluna `flag_*`; a exclusão, quando existe, "
         "acontece só na análise (`base_analise`).",
         "",
@@ -491,9 +549,21 @@ def salvar_registro_md(reg: Registro, caminho: Path, n_linhas: int) -> None:
         "|---|---|---|---|---|---|---|",
     ]
     for _, r in t.iterrows():
-        linhas.append(f"| {r.n} | {r.problema} | `{r.coluna}` | {r.linhas_afetadas} | "
-                      f"{r.acao} | {r.justificativa} | {r.exemplos} |")
-    linhas += ["", f"Itens com ocorrência: {len(com_problema)} de {len(t)} checagens."]
+        linhas.append("| " + " | ".join(_celula(v) for v in [
+            r.n, r.problema, f"`{r.coluna}`", r.linhas_afetadas, r.acao,
+            r.justificativa, r.exemplos]) + " |")
+    linhas += [
+        "",
+        f"Checagens de problema com ocorrência: {len(com_problema)} de "
+        f"{len(problemas)}.",
+        "Itens informativos (decisão ou achado de negócio, não erro de dado): "
+        + (", ".join(f"#{i}" for i in informativos["n"]) or "nenhum") + ".",
+        "",
+        "## Limitações conhecidas",
+        "",
+        *[f"- {x}" for x in LIMITACOES],
+        "",
+    ]
     caminho.parent.mkdir(parents=True, exist_ok=True)
     caminho.write_text("\n".join(linhas), encoding="utf-8")
 
@@ -507,12 +577,14 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s")
 
-    df, reg = tratar(carregar_bruto(a.entrada))
+    bruto = carregar_bruto(a.entrada)
+    df, reg = tratar(bruto)
     Path(a.saida).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(a.saida, index=False, encoding="utf-8-sig")
     reg.to_frame().to_csv(Path(a.saida).with_name("registro_tratamento.csv"),
                           index=False, encoding="utf-8-sig")
-    salvar_registro_md(reg, Path(a.registro), len(df))
+    salvar_registro_md(reg, Path(a.registro), len(bruto), len(df),
+                       Path(a.entrada).name)
     log.info("Saídas: %s | %s", a.saida, a.registro)
 
 
