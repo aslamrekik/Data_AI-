@@ -1,6 +1,8 @@
 # Python >= 3.11. Só dependências diretas; versões mínimas testadas.
 pandas>=3.0
 numpy>=2.0
+matplotlib>=3.9
+scipy>=1.14
 jupyter>=1.0
 ipykernel>=6.29
 pytest>=8.0
