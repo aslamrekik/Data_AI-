@@ -15,4 +15,4 @@ M2: o registro dizia "validado 2 de 2" de forma enganosa.
 Minha acao->reproduzi os achados , aceitei alguns, simplifiquei outros, recusei o B3 com justificativa, e transformei os casos de borda em testes. 
 --> Entao basicamento : estruturo o codigo com LLM Claude  -> reviso com Claude Code -> indentifico os erros -> Corrijo
 - (2 horas) Feat 2 Analise funil , 
-- ( 3 horas ) Feat Laudos 
+- ( 5 horas ) Feat Laudos 
