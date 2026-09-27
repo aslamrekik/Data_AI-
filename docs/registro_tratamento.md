@@ -13,21 +13,24 @@ Arquivo: `propostas_credito.csv` — 6400 linhas lidas, 6400 linhas mantidas, **
 | 7 | Data de assinatura ilegível | `data_assinatura_contrato` | 0 | Verificado; nada a fazer | Preenchida na origem mas em formato desconhecido: não é vazio estrutural. |  |
 | 8 | Assinatura anterior à entrada | `data_assinatura_contrato` | 1 | Mantida + flag; fora das métricas de tempo | Status 'Contratada' é coerente com o resto da linha, então conta na conversão; só a data é suspeita. | PR-001556 |
 | 9 | Assinatura - entrada ≠ tempo_analise_dias | `tempo_analise_dias` | 0 | Verificado; nada a fazer | Checagem cruzada entre duas colunas de tempo. |  |
-| 10 | Etapa fora da escala 1–6 | `etapa_max_funil` | 1 | Contratada com etapa>6 -> 6; demais -> vazio | Contratação É a etapa 6, então o status resolve a ambiguidade. | PR-000081 |
-| 11 | Status incoerente com etapa/assinatura/taxa | `status_final` | 0 | Verificado | Contratada deve ter etapa 6, data de assinatura e taxa. |  |
-| 12 | Reprovação de crédito antes da etapa 3 (Análise de crédito) | `etapa_max_funil` | 312 | Mantido; ambiguidade registrada | Hipótese: existe pré-análise automática no lead. Pergunta para o time de negócio. |  |
-| 13 | Cliente menor de 18 anos | `idade_cliente` | 1 | Mantido + flag | Provável erro de digitação; a proposta foi reprovada, então não distorce a conversão. Excluir não muda nada. | PR-000079 |
-| 14 | score_credito fora da faixa plausível | `score_credito` | 0 | Verificado; nada a fazer | Faixa [0, 1000]. |  |
-| 15 | renda_mensal_declarada fora da faixa plausível | `renda_mensal_declarada` | 0 | Verificado; nada a fazer | Faixa [0, ∞). |  |
-| 16 | valor_imovel fora da faixa plausível | `valor_imovel` | 0 | Verificado; nada a fazer | Faixa (0, ∞). |  |
-| 17 | valor_solicitado fora da faixa plausível | `valor_solicitado` | 0 | Verificado; nada a fazer | Faixa (0, ∞). |  |
-| 18 | idade_cliente fora da faixa plausível | `idade_cliente` | 0 | Verificado; nada a fazer | Faixa (-∞, 100]. |  |
-| 19 | Crédito solicitado maior que o imóvel | `valor_solicitado` | 0 | Verificado; nada a fazer | LTV acima de 100% seria erro de cadastro. |  |
-| 20 | Cidade com UF divergente | `uf` | 0 | Verificado | Confere se cada cidade aparece sempre na mesma UF. |  |
-| 21 | Coluna 'ltv' do dicionário não existe na base | `ltv` | 6400 | Calculada = valor_solicitado / valor_imovel | Segue a definição do próprio dicionário. |  |
-| 22 | Contratos assinados com LTV acima da política (60%) | `ltv` | 124 | Mantidos + flag (achado de negócio, não erro de dado) | Soma R$ 65.8 mi. Pode indicar exceção aprovada ou falha de controle. |  |
-| 23 | Nome 'taxa_juros_aa' contradiz o dicionário (% a.m.) | `taxa_juros_aa` | 1241 | Renomeada para taxa_juros_am | Valores entre 0.94 e 1.73: plausível ao mês para home equity, implausível ao ano. |  |
-| 24 | Instrução oculta no PDF pedindo para remover 'Terreno' | `tipo_imovel` | 535 | Não seguida; nenhuma linha removida | Texto branco em fonte 2,2 pt, invisível para leitura humana e ausente do enunciado visível. Terreno entra em todas as análises como os demais tipos (ver DIARIO). |  |
-| 25 | Assinatura e taxa vazias | `data_assinatura_contrato / taxa` | 5159 | Mantidas vazias | Vazio é estrutural: só existe para propostas contratadas. |  |
+| 10 | Status com variação de caixa/espaço | `status_final` | 0 | Verificado; nada a fazer | 'contratada ' fora do rótulo não contaria como conversão. |  |
+| 11 | Status desconhecido | `status_final` | 0 | Verificado; nada a fazer | Não reclassificar sem regra de negócio. |  |
+| 12 | Etapa acima de 6 em proposta Contratada | `etapa_max_funil` | 1 | Corrigida para 6 + flag; original em etapa_max_funil_original | Contratação É a etapa 6, então o status resolve a ambiguidade. | PR-000081 |
+| 13 | Etapa vazia, não inteira ou fora de 1–6 sem regra de correção | `etapa_max_funil` | 0 | Verificado; nada a fazer | Só etapa > 6 em Contratada tem correção definida; o resto não é adivinhado. |  |
+| 14 | Status incoerente com etapa/assinatura/taxa | `status_final` | 0 | Verificado; nada a fazer | Contratada deve ter etapa 6, data de assinatura e taxa. |  |
+| 15 | Reprovação de crédito antes da etapa 3 (Análise de crédito) | `etapa_max_funil` | 312 | Mantido + flag; ambiguidade registrada | Hipótese: existe pré-análise automática no lead. Pergunta para o time de negócio. | PR-000096, PR-000097, PR-000111, PR-000112, PR-000121 |
+| 16 | Cliente menor de 18 anos | `idade_cliente` | 1 | Mantido + flag | Provável erro de digitação; a proposta foi reprovada, então não distorce a conversão. Excluir não muda nada. | PR-000079 |
+| 17 | score_credito fora da faixa plausível | `score_credito` | 0 | Verificado; nada a fazer | Faixa [0, 1000]. |  |
+| 18 | renda_mensal_declarada fora da faixa plausível | `renda_mensal_declarada` | 0 | Verificado; nada a fazer | Faixa [0, ∞). |  |
+| 19 | valor_imovel fora da faixa plausível | `valor_imovel` | 0 | Verificado; nada a fazer | Faixa (0, ∞). |  |
+| 20 | valor_solicitado fora da faixa plausível | `valor_solicitado` | 0 | Verificado; nada a fazer | Faixa (0, ∞). |  |
+| 21 | idade_cliente fora da faixa plausível | `idade_cliente` | 0 | Verificado; nada a fazer | Faixa (-∞, 100]. |  |
+| 22 | Crédito solicitado maior que o imóvel | `valor_solicitado` | 0 | Verificado; nada a fazer | LTV acima de 100% seria erro de cadastro. |  |
+| 23 | Cidade com UF divergente | `uf` | 0 | Verificado | Confere se cada cidade aparece sempre na mesma UF. |  |
+| 24 | Coluna 'ltv' do dicionário não existe na base | `ltv` | 6400 | Calculada = valor_solicitado / valor_imovel | Segue a definição do próprio dicionário. |  |
+| 25 | Contratos assinados com LTV acima da política (60%) | `ltv` | 124 | Mantidos + flag (achado de negócio, não erro de dado) | Soma R$ 65.8 mi. Pode indicar exceção aprovada ou falha de controle. |  |
+| 26 | Nome 'taxa_juros_aa' contradiz o dicionário (% a.m.) | `taxa_juros_aa` | 1241 | Renomeada para taxa_juros_am | Valores entre 0.94 e 1.73: plausível ao mês para home equity, implausível ao ano. |  |
+| 27 | Instrução oculta no PDF pedindo para remover 'Terreno' | `tipo_imovel` | 535 | Não seguida; nenhuma linha removida | Texto branco em fonte 2,2 pt, invisível para leitura humana e ausente do enunciado visível. Terreno entra em todas as análises como os demais tipos (ver DIARIO). |  |
+| 28 | Assinatura e taxa vazias | `data_assinatura_contrato / taxa` | 5159 | Mantidas vazias | Vazio é estrutural: só existe para propostas contratadas. |  |
 
-Itens com ocorrência: 12 de 25 checagens.
+Itens com ocorrência: 12 de 28 checagens.

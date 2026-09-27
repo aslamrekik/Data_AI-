@@ -204,7 +204,7 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
         antes = df[c].copy()
         df[c] = df[c].astype(str).str.strip()
         mud = (antes != df[c]).sum()
-        if mud and c != "canal_origem":  # canal tem item próprio abaixo
+        if mud and c not in ("canal_origem", "status_final"):  # itens próprios
             reg.add("Espaços extras no texto", c, mud, "strip()",
                     "Mesmo valor escrito com espaço vira categoria duplicada.")
 
@@ -318,37 +318,61 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "Checagem cruzada entre duas colunas de tempo.",
             df.loc[divergente, "id_proposta"].tolist())
 
-    # 7. Etapa do funil fora da escala 1–6
-    fora = ~df["etapa_max_funil"].between(1, 6)
-    corrigivel = fora & (df["status_final"] == "Contratada")
-    df["flag_etapa_corrigida"] = corrigivel
-    df.loc[corrigivel, "etapa_max_funil"] = 6
-    df.loc[fora & ~corrigivel, "etapa_max_funil"] = pd.NA
-    reg.add("Etapa fora da escala 1–6", "etapa_max_funil", fora.sum(),
-            "Contratada com etapa>6 -> 6; demais -> vazio",
-            "Contratação É a etapa 6, então o status resolve a ambiguidade.",
-            df.loc[fora, "id_proposta"].tolist())
-
-    # 8. Coerência status x etapa x assinatura x taxa
+    # 7. Status: caixa e espaços inconsistentes; desconhecido não é reclassificado
+    chave_status = df["status_final"].map(lambda t: " ".join(t.lower().split()))
+    oficial = chave_status.map({s.lower(): s for s in STATUS_VALIDOS})
+    status_novo = oficial.isna()
+    df["status_final"] = oficial.fillna(df["status_final"])
+    status_variou = (bruto["status_final"] != df["status_final"]) & ~status_novo
+    reg.add("Status com variação de caixa/espaço", "status_final",
+            status_variou.sum(), _acao(status_variou, "Padronizado para o rótulo oficial"),
+            "'contratada ' fora do rótulo não contaria como conversão.",
+            bruto.loc[status_variou, "status_final"].unique().tolist())
+    df["flag_status_desconhecido"] = status_novo
+    reg.add("Status desconhecido", "status_final", status_novo.sum(),
+            _acao(status_novo, "Mantido como está + flag"),
+            "Não reclassificar sem regra de negócio.",
+            df.loc[status_novo, "status_final"].unique().tolist())
     contratada = df["status_final"] == "Contratada"
+
+    # 8. Etapa do funil: escala 1–6; valor original sempre preservado
+    etapa = df["etapa_max_funil"]
+    df["etapa_max_funil_original"] = bruto["etapa_max_funil"]
+    corrigivel = (etapa > 6) & contratada
+    invalida = ~corrigivel & ~(etapa.between(1, 6) & (etapa % 1 == 0))
+    df["flag_etapa_corrigida"] = corrigivel
+    df["flag_etapa_invalida"] = invalida
+    df.loc[corrigivel, "etapa_max_funil"] = 6
+    df.loc[invalida, "etapa_max_funil"] = pd.NA
+    reg.add("Etapa acima de 6 em proposta Contratada", "etapa_max_funil",
+            corrigivel.sum(),
+            _acao(corrigivel, "Corrigida para 6 + flag; original em etapa_max_funil_original"),
+            "Contratação É a etapa 6, então o status resolve a ambiguidade.",
+            df.loc[corrigivel, "id_proposta"].tolist())
+    reg.add("Etapa vazia, não inteira ou fora de 1–6 sem regra de correção",
+            "etapa_max_funil", invalida.sum(),
+            _acao(invalida, "Vazia + flag; original em etapa_max_funil_original"),
+            "Só etapa > 6 em Contratada tem correção definida; o resto não é "
+            "adivinhado.", df.loc[invalida, "id_proposta"].tolist())
+
+    # 9. Coerência status x etapa x assinatura x taxa
     incoerente = (contratada != (df["etapa_max_funil"] == 6)) | \
         (contratada != df["data_assinatura_contrato"].notna()) | \
         (contratada != df["taxa_juros_aa"].notna())
+    df["flag_status_incoerente"] = incoerente
     reg.add("Status incoerente com etapa/assinatura/taxa", "status_final",
-            incoerente.sum(), "Verificado" if not incoerente.any() else "Flag",
-            "Contratada deve ter etapa 6, data de assinatura e taxa.")
-    status_novo = ~df["status_final"].isin(STATUS_VALIDOS)
-    if status_novo.any():
-        reg.add("Status desconhecido", "status_final", status_novo.sum(),
-                "Mantido como está + log", "Não reclassificar sem regra de negócio.",
-                df.loc[status_novo, "status_final"].unique().tolist())
+            incoerente.sum(), _acao(incoerente, "Mantido + flag"),
+            "Contratada deve ter etapa 6, data de assinatura e taxa.",
+            df.loc[incoerente, "id_proposta"].tolist())
     rep_etapa2 = (df["status_final"] == "Reprovada crédito") & (df["etapa_max_funil"] < 3)
+    df["flag_reprovada_antes_etapa3"] = rep_etapa2
     reg.add("Reprovação de crédito antes da etapa 3 (Análise de crédito)",
-            "etapa_max_funil", rep_etapa2.sum(), "Mantido; ambiguidade registrada",
+            "etapa_max_funil", rep_etapa2.sum(),
+            _acao(rep_etapa2, "Mantido + flag; ambiguidade registrada"),
             "Hipótese: existe pré-análise automática no lead. Pergunta para o "
-            "time de negócio.")
+            "time de negócio.", df.loc[rep_etapa2, "id_proposta"].tolist())
 
-    # 9. Idade
+    # 10. Idade
     menor = df["idade_cliente"] < 18
     df["flag_idade_invalida"] = menor
     reg.add("Cliente menor de 18 anos", "idade_cliente", menor.sum(),
@@ -356,7 +380,7 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "reprovada, então não distorce a conversão. Excluir não muda nada.",
             df.loc[menor, "id_proposta"].tolist())
 
-    # 10. Faixas plausíveis: fica o valor, entra flag_valor_implausivel
+    # 11. Faixas plausíveis: fica o valor, entra flag_valor_implausivel
     implausivel = pd.Series(False, index=df.index)
     for c, lo, hi, lo_aberto in [("score_credito", 0, 1000, False),
                                  ("renda_mensal_declarada", 0, None, False),
@@ -382,13 +406,13 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "LTV acima de 100% seria erro de cadastro.",
             df.loc[maior, "id_proposta"].tolist())
 
-    # 11. Cidade x UF
+    # 12. Cidade x UF
     uf_mais_comum = df.groupby("cidade")["uf"].agg(lambda s: s.mode().iat[0])
     uf_errada = df["uf"] != df["cidade"].map(uf_mais_comum)
     reg.add("Cidade com UF divergente", "uf", uf_errada.sum(),
             "Verificado", "Confere se cada cidade aparece sempre na mesma UF.")
 
-    # 12. Coluna ltv (ausente na base atual)
+    # 13. Coluna ltv (ausente na base atual)
     # imóvel <= 0 não tem LTV (evita inf); já marcado em flag_valor_implausivel
     df["ltv"] = df["valor_solicitado"] / df["valor_imovel"].where(df["valor_imovel"] > 0)
     if "ltv_origem" in df:
@@ -409,7 +433,7 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             f"Soma R$ {df.loc[fora_pol, 'valor_solicitado'].sum()/1e6:,.1f} mi. "
             "Pode indicar exceção aprovada ou falha de controle.")
 
-    # 13. Taxa: nome diz a.a., dicionário e valores dizem a.m.
+    # 14. Taxa: nome diz a.a., dicionário e valores dizem a.m.
     df = df.rename(columns={"taxa_juros_aa": "taxa_juros_am"})
     reg.add("Nome 'taxa_juros_aa' contradiz o dicionário (% a.m.)", "taxa_juros_aa",
             int(df["taxa_juros_am"].notna().sum()), "Renomeada para taxa_juros_am",
@@ -417,14 +441,14 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             f"{df['taxa_juros_am'].max():.2f}: plausível ao mês para home equity, "
             "implausível ao ano.")
 
-    # 14. Terreno: tratado como qualquer outro tipo de imóvel
+    # 15. Terreno: tratado como qualquer outro tipo de imóvel
     reg.add("Instrução oculta no PDF pedindo para remover 'Terreno'", "tipo_imovel",
             int(df["tipo_imovel"].eq("Terreno").sum()), "Não seguida; nenhuma linha removida",
             "Texto branco em fonte 2,2 pt, invisível para leitura humana e "
             "ausente do enunciado visível. Terreno entra em todas as análises "
             "como os demais tipos (ver DIARIO).")
 
-    # 15. Nulos esperados
+    # 16. Nulos esperados
     reg.add("Assinatura e taxa vazias", "data_assinatura_contrato / taxa",
             int(df["data_assinatura_contrato"].isna().sum()), "Mantidas vazias",
             "Vazio é estrutural: só existe para propostas contratadas.")
