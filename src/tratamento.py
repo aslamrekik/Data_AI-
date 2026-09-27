@@ -165,6 +165,13 @@ def _para_numero(s: pd.Series, milhar: bool = False) -> tuple[pd.Series, pd.Seri
     return pd.to_numeric(t.replace("", pd.NA), errors="coerce"), br
 
 
+def _para_data(s: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Aceita aaaa-mm-dd e dd/mm/aaaa; devolve (datas, máscara dd/mm/aaaa)."""
+    iso = pd.to_datetime(s, format="%Y-%m-%d", errors="coerce")
+    br = pd.to_datetime(s, format="%d/%m/%Y", errors="coerce")
+    return iso.fillna(br), iso.isna() & br.notna()
+
+
 def _acao(mascara: pd.Series, acao: str) -> str:
     """Texto da ação conforme o resultado: nada encontrado não vira 'Flag'."""
     return acao if mascara.any() else "Verificado; nada a fazer"
@@ -255,43 +262,60 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             reg.add("Valor não numérico", c, falhou.sum(), "Virou vazio (NaN)",
                     "Não inventar valor.", original[falhou].unique().tolist())
 
-    # 5. Datas de entrada: formato misto ISO e dd/mm/aaaa
-    iso = pd.to_datetime(df["data_entrada"], format="%Y-%m-%d", errors="coerce")
-    br = pd.to_datetime(df["data_entrada"], format="%d/%m/%Y", errors="coerce")
-    df["data_assinatura_contrato"] = pd.to_datetime(
-        df["data_assinatura_contrato"].replace("", pd.NA),
-        format="%Y-%m-%d", errors="coerce")
-    fmt_br = iso.isna() & br.notna()
-    df["data_entrada"] = iso.fillna(br)
+    # 5. Datas: formato misto ISO e dd/mm/aaaa nas duas colunas
+    df["data_entrada"], fmt_br = _para_data(df["data_entrada"])
+    assinatura_bruta = df["data_assinatura_contrato"]
+    df["data_assinatura_contrato"], assin_br = _para_data(assinatura_bruta)
     # prova: entrada + tempo_analise deve bater com a assinatura
     prova = fmt_br & df["data_assinatura_contrato"].notna()
     confere = ((df["data_assinatura_contrato"] - df["data_entrada"]).dt.days
                == df["tempo_analise_dias"])
+    provada = prova & confere
+    dia, mes = df["data_entrada"].dt.day, df["data_entrada"].dt.month
+    ambigua = fmt_br & (dia <= 12) & (dia != mes)
+    sem_prova = ambigua & ~provada
     reg.add("Data de entrada em dd/mm/aaaa (resto em ISO)", "data_entrada",
-            fmt_br.sum(), "Lida como dia/mês/ano",
-            f"Validado cruzando com assinatura - tempo_analise: "
-            f"{int((prova & confere).sum())} de {int(prova.sum())} batem. "
-            "Atenção: abrir o CSV no Excel inverte dia e mês nesses casos.",
+            fmt_br.sum(), _acao(fmt_br, "Lida como dia/mês/ano"),
+            f"{ambigua.sum()} ambígua(s) (dia ≤ 12, poderia ser mês/dia). "
+            f"Conferência com assinatura − tempo_analise_dias: {provada.sum()} "
+            f"de {prova.sum()} com assinatura batem"
+            + (f"; ambíguas sem conferência: "
+               f"{', '.join(df.loc[sem_prova, 'id_proposta'])}" if sem_prova.any() else "")
+            + ". Atenção: abrir o CSV no Excel inverte dia e mês nesses casos.",
             df.loc[fmt_br, "id_proposta"].tolist())
+    if assin_br.any():
+        reg.add("Data de assinatura em dd/mm/aaaa (resto em ISO)",
+                "data_assinatura_contrato", assin_br.sum(), "Lida como dia/mês/ano",
+                "Mesmo tratamento da data de entrada.",
+                df.loc[assin_br, "id_proposta"].tolist())
     sem_data = df["data_entrada"].isna()
-    if sem_data.any():
-        reg.add("Data de entrada ilegível", "data_entrada", sem_data.sum(),
-                "Mantida vazia + fora de análises temporais", "Não inventar data.")
+    df["flag_data_entrada_invalida"] = sem_data
+    reg.add("Data de entrada vazia ou ilegível", "data_entrada", sem_data.sum(),
+            _acao(sem_data, "Mantida vazia + flag; fora das métricas de tempo"),
+            "Não inventar data.", df.loc[sem_data, "id_proposta"].tolist())
+    assin_ruim = df["data_assinatura_contrato"].isna() & (assinatura_bruta != "")
+    df["flag_data_assinatura_invalida"] = assin_ruim
+    reg.add("Data de assinatura ilegível", "data_assinatura_contrato",
+            assin_ruim.sum(),
+            _acao(assin_ruim, "Mantida vazia + flag; fora das métricas de tempo"),
+            "Preenchida na origem mas em formato desconhecido: não é vazio "
+            "estrutural.", assinatura_bruta[assin_ruim].unique().tolist())
 
     # 6. Coerência de datas
     dias = (df["data_assinatura_contrato"] - df["data_entrada"]).dt.days
-    antes = dias < 0
-    divergente = df["data_assinatura_contrato"].notna() & ~antes & \
-        (dias != df["tempo_analise_dias"])
+    tem_datas = df["data_entrada"].notna() & df["data_assinatura_contrato"].notna()
+    antes = tem_datas & (dias < 0)
+    divergente = tem_datas & ~antes & (dias != df["tempo_analise_dias"])
     df["flag_data_inconsistente"] = antes | divergente
     reg.add("Assinatura anterior à entrada", "data_assinatura_contrato",
-            antes.sum(), "Mantida + flag; fora das métricas de tempo",
+            antes.sum(), _acao(antes, "Mantida + flag; fora das métricas de tempo"),
             "Status 'Contratada' é coerente com o resto da linha, então conta "
             "na conversão; só a data é suspeita.",
             df.loc[antes, "id_proposta"].tolist())
     reg.add("Assinatura - entrada ≠ tempo_analise_dias",
             "tempo_analise_dias", divergente.sum(),
-            "Mantida + flag", "Checagem cruzada entre duas colunas de tempo.",
+            _acao(divergente, "Mantida + flag; fora das métricas de tempo"),
+            "Checagem cruzada entre duas colunas de tempo.",
             df.loc[divergente, "id_proposta"].tolist())
 
     # 7. Etapa do funil fora da escala 1–6
@@ -406,7 +430,10 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "Vazio é estrutural: só existe para propostas contratadas.")
 
     # Métrica de tempo só com datas confiáveis
-    df["tempo_confiavel"] = ~df["flag_data_inconsistente"]
+    df["tempo_confiavel"] = ~(df["flag_data_inconsistente"]
+                              | df["flag_data_entrada_invalida"]
+                              | df["flag_data_assinatura_invalida"]
+                              | df["tempo_analise_dias"].isna())
     df["contratada"] = contratada.astype(int)
 
     log.info("Tratamento concluído: %d linhas entraram, %d saíram (0 removidas)",
