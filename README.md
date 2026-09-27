@@ -45,7 +45,7 @@ pytest                     # testes do tratamento
 ```
 
 - **Parte 1:** `jupyter notebook parte1_analise.ipynb` (a partir da raiz do projeto)
-- **Parte 2:** `python parte2_relatorio/relatorio_semanal.py [--referencia AAAA-MM-DD]` ou `parte2_relatorio\rodar_relatorio.bat` (pode ir no Agendador de Tarefas). Gera `parte2_relatorio/output/relatorio_funil_<segunda>.html` e um log em `parte2_relatorio/logs/`; código de saída 0 = ok, 1 = entrada inválida, 2 = erro inesperado. Exemplo pronto, sem rodar nada: `docs/exemplo_relatorio_funil_2025-06-16.html`.
+- **Parte 2:** `python parte2_relatorio/relatorio_semanal.py [--referencia AAAA-MM-DD] [--saida PASTA]` ou `parte2_relatorio\rodar_relatorio.bat` (pode ir no Agendador de Tarefas). Gera `parte2_relatorio/output/relatorio_funil_<segunda>.html` e um log em `parte2_relatorio/logs/`; código de saída 0 = ok, 1 = entrada inválida, 2 = erro inesperado. Exemplo pronto, sem rodar nada: `docs/exemplo_relatorio_funil_2025-06-16.html`.
 - **Parte 3:**
   ```
   cd parte3_laudos

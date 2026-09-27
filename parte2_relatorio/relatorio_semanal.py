@@ -7,6 +7,7 @@ calcula as métricas-chave e exporta um HTML autocontido, pronto para enviar.
 Uso (da raiz do repositório, ou pelo rodar_relatorio.bat):
     python parte2_relatorio/relatorio_semanal.py
     python parte2_relatorio/relatorio_semanal.py --entrada outro.csv --referencia 2025-12-29
+    python parte2_relatorio/relatorio_semanal.py --saida pasta/   # onde gravar o HTML
 
 Semana de referência: por padrão, a última semana completa (segunda a domingo)
 presente na base. Em produção, com dados do dia, seria a semana passada.
@@ -171,7 +172,10 @@ def gerar_html(m: dict, reg_df: pd.DataFrame, inicio, fim, arquivo: str, n_linha
     perdas = m["perdas"].assign(valor=lambda d: d["valor"].map(lambda v: "R$ " + _br(v / 1e6, "{:,.1f}") + " mi"))
     linhas_perda = "".join(f"<tr><td>{i}</td><td>{r.propostas}</td><td>{r.valor}</td></tr>"
                            for i, r in perdas.iterrows())
-    problemas = reg_df[reg_df["linhas_afetadas"] > 0]
+    # Só problemas de dado: itens informativos (ltv calculada, taxa renomeada, Terreno...) são
+    # decisões documentadas no registro de tratamento, não alertas para a semana
+    tipo = reg_df["tipo"] if "tipo" in reg_df else pd.Series("problema", index=reg_df.index)
+    problemas = reg_df[(reg_df["linhas_afetadas"] > 0) & (tipo == "problema")]
     linhas_dq = "".join(f"<tr><td>{r.problema}</td><td>{r.linhas_afetadas}</td><td>{r.acao}</td></tr>"
                         for r in problemas.itertuples())
     j0, j1 = m["janela_madura"]
@@ -218,7 +222,7 @@ fonte: {arquivo} ({_br(n_linhas, "{:,.0f}")} propostas, nenhuma removida)</div>
 # ----------------------------------------------------------------------------
 # Execução
 # ----------------------------------------------------------------------------
-def executar(entrada: Path, referencia: str | None) -> Path:
+def executar(entrada: Path, referencia: str | None, saida: Path = DIR / "output") -> Path:
     log.info("Início. Entrada: %s", entrada)
     bruto = t.carregar_bruto(entrada)          # FileNotFoundError / formato não suportado
     df, reg = t.tratar(bruto)                  # SchemaError se faltar coluna ou vier vazio
@@ -230,8 +234,8 @@ def executar(entrada: Path, referencia: str | None) -> Path:
     m = calcular(df, inicio, fim)
     for nome, (atual, media, _) in m["kpis"].items():
         log.info("KPI %-38s semana=%.1f média_%ds=%.1f", nome, atual, m["n_hist"], media)
-    (DIR / "output").mkdir(parents=True, exist_ok=True)
-    destino = DIR / "output" / f"relatorio_funil_{inicio:%Y-%m-%d}.html"
+    saida.mkdir(parents=True, exist_ok=True)
+    destino = saida / f"relatorio_funil_{inicio:%Y-%m-%d}.html"
     destino.write_text(gerar_html(m, reg_df, inicio, fim, entrada.name, len(df)), encoding="utf-8")
     log.info("Relatório gerado: %s", destino)
     return destino
@@ -241,10 +245,11 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Gera o relatório semanal do funil.")
     p.add_argument("--entrada", type=Path, default=RAIZ / "data/raw/propostas_credito.csv")
     p.add_argument("--referencia", help="qualquer dia da semana desejada (AAAA-MM-DD)")
+    p.add_argument("--saida", type=Path, default=DIR / "output", help="pasta onde gravar o HTML")
     a = p.parse_args()
     arq_log = configurar_log()
     try:
-        executar(a.entrada, a.referencia)
+        executar(a.entrada, a.referencia, a.saida)
         return 0
     except (FileNotFoundError, t.SchemaError, ValueError, pd.errors.EmptyDataError, csv.Error) as e:
         log.error("Entrada inválida: %s. Nenhum relatório foi gerado.", e)
