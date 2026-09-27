@@ -16,6 +16,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import csv
 import logging
 import unicodedata
 from dataclasses import dataclass, field, asdict
@@ -44,6 +45,10 @@ CANAIS = {  # chave normalizada (sem acento, minúscula) -> rótulo oficial
     "indicacao": "Indicação",
     "parceria": "Parceria",
 }
+# Colunas criadas pelo tratamento; se a base já trouxer alguma (ou qualquer
+# flag_* extra), a original é preservada como <coluna>_origem.
+COLUNAS_GERADAS = {"ltv", "taxa_juros_am", "contratada", "tempo_confiavel",
+                   "etapa_max_funil_original"}
 STATUS_VALIDOS = {
     "Contratada", "Desistiu", "Documentação pendente",
     "Problema garantia", "Reprovada crédito", "Sem retorno",
@@ -81,19 +86,40 @@ class Registro:
 # Leitura e schema
 # --------------------------------------------------------------------------
 def carregar_bruto(caminho: str | Path) -> pd.DataFrame:
-    """Lê tudo como texto: nenhuma conversão silenciosa acontece aqui."""
+    """Lê tudo como texto: nenhuma conversão silenciosa acontece aqui.
+
+    Só aceita CSV. Tenta UTF-8 (com ou sem BOM) e, se falhar, cp1252
+    (padrão do Excel em português). O encoding usado fica em
+    df.attrs["encoding"] para entrar no registro.
+    """
     caminho = Path(caminho)
     if not caminho.exists():
         raise FileNotFoundError(f"Arquivo não encontrado: {caminho}")
-    if caminho.suffix.lower() == ".csv":
-        df = pd.read_csv(caminho, dtype=str, keep_default_na=False,
-                         encoding="utf-8-sig", sep=None, engine="python")
-    elif caminho.suffix.lower() in {".xlsx", ".xls"}:
-        log.warning("Entrada em Excel: o Excel pode ter convertido datas e "
-                    "números antes de chegar aqui. Prefira o CSV original.")
-        df = pd.read_excel(caminho, dtype=str).fillna("")
+    sufixo = caminho.suffix.lower()
+    if sufixo in {".xlsx", ".xls"}:
+        raise ValueError(
+            f"Entrada em Excel não é suportada ({caminho.name}): o Excel "
+            "converte datas e números antes de chegar aqui. Exporte o CSV "
+            "original do sistema e rode de novo.")
+    if sufixo != ".csv":
+        raise ValueError(f"Formato não suportado: {caminho.suffix}. Use CSV.")
+    if caminho.stat().st_size == 0:
+        raise SchemaError(f"Arquivo vazio: {caminho.name}")
+    for encoding in ("utf-8-sig", "cp1252"):
+        try:
+            df = pd.read_csv(caminho, dtype=str, keep_default_na=False,
+                             encoding=encoding, sep=None, engine="python")
+            break
+        except UnicodeDecodeError:
+            log.warning("Leitura de %s como %s falhou.", caminho.name, encoding)
+        except (pd.errors.EmptyDataError, csv.Error) as e:
+            raise SchemaError(
+                f"Não foi possível ler {caminho.name} como CSV: {e}") from e
     else:
-        raise ValueError(f"Formato não suportado: {caminho.suffix}")
+        raise SchemaError(f"{caminho.name} não está em UTF-8 nem em cp1252.")
+    if encoding != "utf-8-sig":
+        log.warning("%s lido como %s: confira os acentos.", caminho.name, encoding)
+    df.attrs["encoding"] = encoding
     df.columns = [c.strip().lstrip("\ufeff").lower() for c in df.columns]
     log.info("Lido %s: %d linhas x %d colunas", caminho.name, *df.shape)
     return df
@@ -135,10 +161,23 @@ def _para_numero(s: pd.Series) -> pd.Series:
 # Tratamento
 # --------------------------------------------------------------------------
 def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
-    validar_schema(bruto)
+    extras = validar_schema(bruto)
     reg = Registro()
+    n = len(bruto)
+
+    # 0. Encoding e colunas extras que colidem com as geradas aqui
+    if bruto.attrs.get("encoding", "utf-8-sig") != "utf-8-sig":
+        reg.add("Arquivo fora de UTF-8", "todas", n,
+                f"Lido como {bruto.attrs['encoding']}",
+                "Padrão do Excel em português; ler como UTF-8 quebraria. "
+                "Prefira exportar em UTF-8.")
+    colisao = [c for c in extras if c in COLUNAS_GERADAS or c.startswith("flag_")]
+    if colisao:
+        bruto = bruto.rename(columns={c: f"{c}_origem" for c in colisao})
+        reg.add("Coluna da base com nome de coluna gerada pelo tratamento",
+                ", ".join(colisao), n, "Original guardada como <coluna>_origem",
+                "Sobrescrever sem aviso apagaria o dado de origem.", colisao)
     df = bruto.copy()
-    n = len(df)
 
     # 1. Texto: espaços sobrando em qualquer coluna
     for c in df.columns:
@@ -287,11 +326,19 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
     reg.add("Cidade com UF divergente", "uf", uf_errada.sum(),
             "Verificado", "Confere se cada cidade aparece sempre na mesma UF.")
 
-    # 12. Coluna ltv ausente
+    # 12. Coluna ltv (ausente na base atual)
     df["ltv"] = df["valor_solicitado"] / df["valor_imovel"]
-    reg.add("Coluna 'ltv' do dicionário não existe na base", "ltv", n,
-            "Calculada = valor_solicitado / valor_imovel",
-            "Segue a definição do próprio dicionário.")
+    if "ltv_origem" in df:
+        origem = pd.to_numeric(df["ltv_origem"], errors="coerce")
+        diverge = ~((origem - df["ltv"]).abs() < 1e-4)
+        reg.add("Coluna 'ltv' veio na base (guardada como ltv_origem)", "ltv",
+                diverge.sum(), "Recalculada = valor_solicitado / valor_imovel",
+                "Linhas onde ltv_origem diverge do cálculo pelo dicionário.",
+                df.loc[diverge, "id_proposta"].tolist())
+    else:
+        reg.add("Coluna 'ltv' do dicionário não existe na base", "ltv", n,
+                "Calculada = valor_solicitado / valor_imovel",
+                "Segue a definição do próprio dicionário.")
     df["flag_ltv_acima_politica"] = df["ltv"] > LIMITE_LTV_POLITICA
     fora_pol = df["flag_ltv_acima_politica"] & contratada
     reg.add("Contratos assinados com LTV acima da política (60%)", "ltv",
