@@ -48,7 +48,9 @@ Para CADA campo devolva:
     nao_aplicavel  -> o campo não existe para este tipo de imóvel;
     contraditorio  -> o laudo traz dois ou mais valores diferentes para o mesmo campo;
     inferido       -> o valor não está escrito, mas decorre diretamente do texto (ver regras).
-- trecho_fonte: trecho LITERAL do laudo, copiado caractere por caractere, que sustenta o valor.
+- trecho_fonte: a LINHA INTEIRA do laudo onde o valor aparece, COM o rótulo, copiada caractere
+  por caractere (ex.: "Vistoria realizada em 12/03/2025.", não só "12/03/2025"; "Endereço: ...,
+  São Paulo/SP", não só "SP"). Nunca cite só o valor.
 - valores_conflitantes: só quando status = contraditorio, cada valor como está escrito.
 
 NUNCA invente, complete ou estime um valor. Na dúvida, use nao_informado.

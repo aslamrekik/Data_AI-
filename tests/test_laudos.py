@@ -445,9 +445,9 @@ ORACULO_ONUS = {
 }   # laudos 04, 06, 11, 14 e 16: o laudo só diz que não há informação -> nao_informado
 
 
-def _linha_de(doc, campo, valor):
+def _linha_de(doc, campo, valor, cidade=None):
     """A linha do laudo que o LLM perfeito citaria: contém o valor e fala do campo."""
-    return next(l for l in doc.splitlines() if nz.valor_no_trecho(campo, valor, l) and nz.ancorado(campo, l))
+    return next(l for l in doc.splitlines() if nz.valor_no_trecho(campo, valor, l) and nz.ancorado(campo, l, cidade))
 
 
 def _resposta_perfeita(laudo):
@@ -469,7 +469,8 @@ def _resposta_perfeita(laudo):
                         "trecho_fonte": _linha_de(doc, campo, v[2][0])}
         else:
             texto, status = v if isinstance(v, tuple) else (v, "encontrado")
-            r[campo] = {"valor_texto": texto, "status": status, "trecho_fonte": _linha_de(doc, campo, texto)}
+            r[campo] = {"valor_texto": texto, "status": status,
+                        "trecho_fonte": _linha_de(doc, campo, texto, ORACULO[laudo].get("cidade"))}
     return doc, RespostaLLM.model_validate(r)
 
 
@@ -538,3 +539,65 @@ def test_function_calling_automatico_desligado():                         # item
     cliente = _ClienteFalso([_resposta().model_dump_json()])
     ex.chamar_gemini(cliente, "m", "texto")
     assert cliente.chamadas[0].config.automatic_function_calling.disable is True
+
+
+# ---------------------------------------------------------------- evidência localizada pelo código (rodada real)
+def _campos(laudo_ou_doc, **campos):
+    doc = laudo_ou_doc if "\n" in laudo_ou_doc else (LAUDOS / f"{laudo_ou_doc}.txt").read_text(encoding="utf-8")
+    return nz.normalizar_resposta(_resposta(**campos), doc)
+
+
+def _enc(valor, trecho):
+    return {"valor_texto": valor, "status": "encontrado", "trecho_fonte": trecho}
+
+
+def test_resposta_real_do_gemini_laudo_01_passa_inteira():
+    """laudo_01.json bruto da rodada real: o Gemini citou só o valor em uf, ano e data."""
+    real = dict(
+        tipo_imovel=_enc("apartamento", "apartamento"),
+        endereco=_enc("Rua das Acácias, 145, ap. 82 - Vila Mariana", "Rua das Acácias, 145, ap. 82 - Vila Mariana"),
+        cidade=_enc("São Paulo", "São Paulo"), uf=_enc("SP", "SP"),
+        area_privativa_m2=_enc("78,40 m²", "78,40 m²"), area_total_m2=_enc("102,10 m²", "102,10 m²"),
+        area_construida_m2={"valor_texto": None, "status": "nao_aplicavel", "trecho_fonte": None},
+        area_terreno_m2={"valor_texto": None, "status": "nao_aplicavel", "trecho_fonte": None},
+        ano_construcao=_enc("2014", "2014"), valor_avaliacao=_enc("R$ 642.000,00", "R$ 642.000,00"),
+        matricula=_enc("184.772 do 14º CRI de São Paulo", "184.772 do 14º CRI de São Paulo"),
+        onus_situacao=_enc("sem_onus", "não foram identificados ônus na certidão analisada."),
+        onus_descricao=_enc("não foram identificados ônus na certidão analisada.",
+                            "não foram identificados ônus na certidão analisada."),
+        data_vistoria=_enc("12/03/2025", "12/03/2025"),
+        responsavel_nome=_enc("Marina Albuquerque", "Marina Albuquerque"),
+        responsavel_registro=_enc("CREA-SP 5061234567", "CREA-SP 5061234567"))
+    campos = _campos("laudo_01", **real)
+    ext = {"laudo_01": {"erro": None, "campos": {k: v.model_dump() for k, v in campos.items()}}}
+    df = av.avaliar({**GABARITO, "laudos": {"laudo_01": GABARITO["laudos"]["laudo_01"]}}, ext)
+    assert (df["resultado"] == "acerto").all(), df[df["resultado"] != "acerto"].to_string()
+    localizados = {k for k, v in campos.items() if (v.motivo or "").startswith(nz.MOTIVO_LOCALIZADA)}
+    assert localizados == {"uf", "ano_construcao", "data_vistoria"}
+    assert campos["data_vistoria"].trecho_fonte == "Vistoria realizada em 12/03/2025."
+
+
+def test_laudo_07_data_em_duas_linhas_so_vale_a_da_vistoria():
+    c = _campos("laudo_07", data_vistoria=_enc("20/04/2025", "20/04/2025"))["data_vistoria"]
+    assert c.valor == "2025-04-20" and c.trecho_fonte == "Data da vistoria: 20-04-2025."
+    assert c.motivo.startswith(nz.MOTIVO_LOCALIZADA)
+
+
+def test_pe_do_crea_nao_vira_uf():
+    # Com a cidade extraída, a evidência é a linha do endereço, nunca a do CREA
+    c = _campos("laudo_06", cidade=_enc("Recife", "Recife"), uf=_enc("PE", "CREA 18001/PE"))["uf"]
+    assert c.valor == "PE" and "CREA" not in c.trecho_fonte and "Recife/PE" in c.trecho_fonte
+    # Sem cidade para ancorar, a linha do CREA sozinha não sustenta a UF
+    c = _campos("laudo_06", uf=_enc("PE", "Responsável técnico: Fernanda Lins, CREA 18001/PE."))["uf"]
+    assert c.status == "nao_verificado" and c.valor is None
+
+
+def test_valor_em_mais_de_uma_linha_do_mesmo_campo_continua_rebaixado():
+    doc = ("LAUDO\nVistoria realizada em 10/05/2025.\n"
+           "Nova vistoria agendada; vistoria anterior em 10/05/2025.\nValor de avaliação: R$ 100.000,00\n")
+    c = _campos(doc, data_vistoria=_enc("10/05/2025", "10/05/2025"))["data_vistoria"]
+    assert c.status == "nao_verificado" and "2 linha(s)" in c.motivo
+
+
+def test_prompt_pede_a_linha_inteira_como_trecho():
+    assert "LINHA INTEIRA" in ex.INSTRUCOES and "Nunca cite só o valor" in ex.INSTRUCOES

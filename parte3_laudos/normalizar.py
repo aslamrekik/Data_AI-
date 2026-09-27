@@ -56,10 +56,33 @@ def contido(parte: str | None, texto: str | None) -> bool:
     return bool(parte and texto and palavras(parte)) and f" {palavras(parte)} " in f" {palavras(texto)} "
 
 
-def ancorado(campo: str, trecho: str | None) -> bool:
-    """O trecho contém uma palavra que identifica o campo (quando o campo tem âncora)."""
+MOTIVO_LOCALIZADA = "evidência localizada pelo código"
+
+
+def ancorado(campo: str, trecho: str | None, cidade: str | None = None) -> bool:
+    """O trecho contém uma palavra que identifica o campo (quando o campo tem âncora).
+
+    UF: a linha não pode ser de registro profissional ('CREA 18001/PE' não é a UF do
+    imóvel) e precisa citar a cidade extraída ou as palavras UF/estado/município.
+    """
+    t = palavras(trecho or "")
+    if campo == "uf":
+        if re.search(r"\b(?:crea|cau|cnai)\b", t):
+            return False
+        return (bool(cidade) and contido(cidade, trecho)) or bool(re.search(r"\b(?:uf|estado|municipio)\b", t))
     padrao = ANCORAS.get(campo)
-    return padrao is None or bool(re.search(rf"\b(?:{padrao})\b", palavras(trecho or "")))
+    return padrao is None or bool(re.search(rf"\b(?:{padrao})\b", t))
+
+
+def sustenta(campo: str, valor: str, trecho: str | None, documento: str, cidade: str | None = None) -> bool:
+    """O trecho existe no laudo, contém o valor e fala do campo."""
+    return (evidencia_existe(trecho, documento) and valor_no_trecho(campo, valor, trecho)
+            and ancorado(campo, trecho, cidade))
+
+
+def localizar_linha(campo: str, valor: str, documento: str, cidade: str | None = None) -> list[str]:
+    """Linhas do laudo que sustentam o valor sozinhas. Só vale como evidência se for UMA."""
+    return [l.strip() for l in documento.splitlines() if sustenta(campo, valor, l, documento, cidade)]
 
 
 TEXTOS_LIVRES = {"endereco", "cidade", "onus_descricao", "responsavel_nome"}
@@ -196,7 +219,7 @@ def _converter(nome: str, txt: str, status: str, ano_vistoria: int | None):
 
 
 def normalizar_campo(nome: str, c: CampoLLM, documento: str,
-                     ano_vistoria: int | None) -> CampoFinal:
+                     ano_vistoria: int | None, cidade: str | None = None) -> CampoFinal:
     # onus_situacao é uma classificação sempre preenchida (regra do gabarito)
     if nome == "onus_situacao" and c.status in ("nao_informado", "nao_aplicavel"):
         return CampoFinal(valor="nao_informado", status="encontrado", trecho_fonte=c.trecho_fonte)
@@ -223,7 +246,20 @@ def normalizar_campo(nome: str, c: CampoLLM, documento: str,
         return CampoFinal(valor=classe, status=c.status, trecho_fonte=c.trecho_fonte)
 
     # A partir daqui o campo TEM valor: exige evidência literal no laudo
-    if not evidencia_existe(c.trecho_fonte, documento):
+    trecho, motivo = c.trecho_fonte, None
+    if c.status != "contraditorio" and nome not in CATEGORICOS:
+        if not c.valor_texto:
+            return rebaixar("status com valor, mas valor_texto vazio")
+        if not sustenta(nome, c.valor_texto, trecho, documento, cidade):
+            # O LLM costuma citar só o valor ("SP", "12/03/2025"). O código procura no laudo
+            # a linha que contém o valor e fala do campo; só aceita se houver exatamente uma.
+            linhas = localizar_linha(nome, c.valor_texto, documento, cidade)
+            if len(linhas) != 1:
+                return rebaixar(f"trecho citado não sustenta o valor e {len(linhas)} linha(s) do "
+                                "laudo sustentam (é preciso exatamente 1)")
+            trecho = linhas[0]
+            motivo = f"{MOTIVO_LOCALIZADA}; o LLM citou {c.trecho_fonte!r}"
+    elif not evidencia_existe(trecho, documento):
         return rebaixar("trecho_fonte não encontrado no laudo (ou curto demais)")
     try:
         if c.status == "contraditorio":
@@ -237,21 +273,17 @@ def normalizar_campo(nome: str, c: CampoLLM, documento: str,
         else:
             if not c.valor_texto:
                 raise ValueError("status com valor, mas valor_texto vazio")
-            # o valor precisa estar DENTRO do trecho citado (categorias são classificações)
-            if nome not in CATEGORICOS and not valor_no_trecho(nome, c.valor_texto, c.trecho_fonte):
-                raise ValueError("valor_texto não aparece no trecho_fonte citado")
-            if not ancorado(nome, c.trecho_fonte):
-                raise ValueError(f"trecho_fonte não fala de {nome}")
             valor = _converter(nome, c.valor_texto, c.status, ano_vistoria)
     except ValueError as e:
-        return CampoFinal(status="nao_verificado", trecho_fonte=c.trecho_fonte, motivo=str(e))
-    return CampoFinal(valor=valor, status=c.status, trecho_fonte=c.trecho_fonte)
+        return CampoFinal(status="nao_verificado", trecho_fonte=trecho, motivo=str(e))
+    return CampoFinal(valor=valor, status=c.status, trecho_fonte=trecho, motivo=motivo)
 
 
 def normalizar_resposta(r: RespostaLLM, documento: str) -> dict[str, CampoFinal]:
     # a data da vistoria vem primeiro: o ano inferido depende dela
-    data = normalizar_campo("data_vistoria", r.data_vistoria, documento, None)
+    cidade = r.cidade.valor_texto if r.cidade.status == "encontrado" else None   # âncora da UF
+    data = normalizar_campo("data_vistoria", r.data_vistoria, documento, None, cidade)
     ano_vist = int(data.valor[:4]) if isinstance(data.valor, str) else None
-    campos = {n: normalizar_campo(n, getattr(r, n), documento, ano_vist) for n in CAMPOS}
+    campos = {n: normalizar_campo(n, getattr(r, n), documento, ano_vist, cidade) for n in CAMPOS}
     campos["data_vistoria"] = data
     return campos
