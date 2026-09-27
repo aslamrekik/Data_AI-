@@ -336,3 +336,151 @@ def test_laudo_com_tag_de_fechamento_nao_escapa_do_delimitador():      # E3
     fecha = chamada.contents.rsplit("\n", 1)[-1]
     assert fecha.startswith("</laudo-") and fecha != "</laudo>"
     assert fecha[2:-1] in chamada.config.system_instruction
+
+
+# ---------------------------------------------------------------- extrator perfeito simulado
+# Um LLM impecável, que segue o prompt ao pé da letra: copia do laudo, na mesma ordem, e cita a
+# linha de onde tirou. Passa pelo normalizar e pelo avaliar DE VERDADE. Tem de dar 100%: o que
+# não bater aqui é erro do normalizador, do critério ou do gabarito, nunca do LLM.
+INF, CONTRA = "inferido", "contraditorio"
+ORACULO = {
+    "laudo_01": dict(endereco="Rua das Acácias, 145, ap. 82 - Vila Mariana", cidade="São Paulo", uf="SP",
+                     area_privativa_m2="78,40 m²", area_total_m2="102,10 m²", ano_construcao="2014",
+                     valor_avaliacao="R$ 642.000,00", matricula="184.772 do 14º CRI de São Paulo",
+                     onus_descricao="não foram identificados ônus na certidão analisada.", data_vistoria="12/03/2025",
+                     responsavel_nome="Marina Albuquerque", responsavel_registro="CREA-SP 5061234567"),
+    "laudo_02": dict(endereco="Av. Central, 900, bloco B", cidade="Belo Horizonte", uf="MG",
+                     area_construida_m2="146,00 m2", area_terreno_m2="250 m²", ano_construcao="2008",
+                     valor_avaliacao="seiscentos e oitenta mil reais (R$ 680.000)", matricula="45.981",
+                     onus_descricao="Certidão: sem gravames conhecidos.", data_vistoria="18/03/2025",
+                     responsavel_nome="Carlos Henrique Moura", responsavel_registro="CAU A123456-7"),
+    "laudo_03": dict(endereco="sala comercial 503, Edifício Horizonte, Rua do Comércio, 77", cidade="Curitiba", uf="PR",
+                     area_privativa_m2="54,8 m²", ano_construcao=("11 anos", INF), valor_avaliacao="R$ 395.500,00",
+                     matricula="77.201", data_vistoria="22 de março de 2025",
+                     onus_descricao="Consta alienação fiduciária em favor de instituição financeira; recomenda-se atualização da certidão.",
+                     responsavel_nome="Beatriz Nunes", responsavel_registro="CAU A987654-3"),
+    "laudo_04": dict(endereco="Lote 18, Quadra F, Rua Ipê Amarelo", cidade="Goiânia", uf="GO", area_terreno_m2="360 m2",
+                     valor_avaliacao="R$ 218.000", matricula="102.334", data_vistoria="02/04/2025",
+                     responsavel_nome="Paulo Sérgio Reis", responsavel_registro="CREA 12345/D-GO"),
+    "laudo_05": dict(endereco="Sítio Boa Vista", cidade="Campinas", uf="SP", area_construida_m2="310 m²",
+                     area_terreno_m2="4,8 ha", ano_construcao="1999", valor_avaliacao="R$ 1.275.000,00", matricula="32.110",
+                     onus_descricao="reserva legal registrada; não foi apontada hipoteca.", data_vistoria="07/04/2025",
+                     responsavel_nome="João A. Farias", responsavel_registro="CREA-SP 5076543210"),
+    "laudo_06": dict(endereco="Rua das Palmeiras, 1.210", cidade="Recife", uf="PE", area_privativa_m2="61m²",
+                     area_total_m2="84m²", ano_construcao="2018", valor_avaliacao="R$ 455.000,00", matricula="9.876",
+                     data_vistoria="15/04/2025", responsavel_nome="Fernanda Lins", responsavel_registro="CREA 18001/PE"),
+    "laudo_07": dict(endereco="Rua Azul, 33, bairro Jardim Europa", cidade="Porto Alegre", uf="RS",
+                     area_construida_m2="92,50 m²", area_terreno_m2="125,00 m²", ano_construcao="2011",
+                     valor_avaliacao="R$ 372.000,00", matricula="66.504",
+                     onus_descricao="Há penhora averbada, conforme documento consultado em 20/04/2025.",
+                     data_vistoria="20-04-2025", responsavel_nome="Rafael Costa", responsavel_registro="CREA-RS 222333"),
+    "laudo_08": dict(endereco="Rua Sete de Setembro, 410", cidade="Salvador", uf="BA", area_construida_m2="118 m²",
+                     ano_construcao=("Ano de referência: 2005", INF), valor_avaliacao="R$ 910.000,00",
+                     onus_descricao="não foi possível verificar por ausência de certidão.", data_vistoria="29/04/2025",
+                     responsavel_nome="Luciana Prado", responsavel_registro="CNAI 12345"),
+    "laudo_09": dict(endereco="Alameda das Flores 88", cidade="Florianópolis", uf="SC", area_construida_m2="198,00 m²",
+                     area_terreno_m2="420,00 m²", ano_construcao="2020", valor_avaliacao="R$ 1.080.000,00",
+                     matricula="12.909", onus_descricao="A certidão indica inexistência de ônus reais.",
+                     data_vistoria="03/05/2025", responsavel_nome="Thiago Martins", responsavel_registro="CREA-SC 7654321"),
+    "laudo_10": dict(endereco="Condomínio Parque Norte, SQN 214, bloco C, apto 407", cidade="Brasília", uf="DF",
+                     area_privativa_m2="96,3 m²", area_total_m2="127,6 m²", ano_construcao="2016",
+                     valor_avaliacao="R$ 735.000,00", matricula="201.443",
+                     onus_descricao="alienação fiduciária mencionada na matrícula.", data_vistoria="09/05/2025",
+                     responsavel_nome="Denise Carvalho", responsavel_registro="CREA-DF 112233"),
+    "laudo_11": dict(endereco="Rua Projetada 4, s/n", cidade="Santos", uf="SP", area_terreno_m2="1.020 m2",
+                     valor_avaliacao="R$ 2.450.000,00", matricula="88.710", data_vistoria="16/05/2025",
+                     responsavel_nome="Marcos Vieira", responsavel_registro="CREA-SP 5099988776"),
+    "laudo_12": dict(endereco="Rua das Bromélias, 500, Lago Sul", cidade="Brasília", uf="DF", area_construida_m2="285 m²",
+                     area_terreno_m2="600 m²", ano_construcao="2012", valor_avaliacao="R$ 2.180.000,00",
+                     matricula="54.122", onus_descricao="servidão de passagem registrada.", data_vistoria="23/05/2025",
+                     responsavel_nome="Andréa Melo", responsavel_registro="CAU A445566-1"),
+    "laudo_13": dict(endereco="Av. Brasil 1770, ap. 1201", cidade="Rio de Janeiro", uf="RJ", area_privativa_m2="112,00m²",
+                     area_total_m2="155,00m²", ano_construcao="1987", valor_avaliacao="R$ 1.320.000,00",
+                     matricula="145.230 do 7º RGI", data_vistoria="30/05/2025",
+                     onus_descricao="penhora cancelada, conforme averbação; documento não informa data do cancelamento.",
+                     responsavel_nome="Eduardo Sampaio", responsavel_registro="CNAI 67890"),
+    "laudo_14": dict(endereco="Rodovia BR-116, km 12", cidade="Betim", uf="MG", area_construida_m2="1.450 m²",
+                     area_terreno_m2="3.000 m²", ano_construcao=("aproximadamente 18 anos", INF),
+                     valor_avaliacao="R$ 3.900.000", matricula="70.008", data_vistoria="05/06/2025",
+                     responsavel_nome="Sérgio Tavares", responsavel_registro="CREA-MG 998877"),
+    "laudo_15": dict(endereco="Rua Monte Verde, 19", cidade="Curitiba", uf="PR", area_construida_m2="135 m²",
+                     area_terreno_m2="200 m²", ano_construcao="2003", valor_avaliacao="R$ 590.000,00", matricula="39.240",
+                     onus_descricao="A certidão consultada informa hipoteca ativa.", data_vistoria="12/06/2025",
+                     responsavel_nome="Patrícia Gomes", responsavel_registro="CREA-PR 123123"),
+    "laudo_16": dict(endereco="Unidade comercial 14, Rua do Sol, 250", cidade="Campinas", uf="SP",
+                     area_privativa_m2="42,00 m²", area_total_m2="67,00m²", ano_construcao="2010",
+                     valor_avaliacao="R$ 288.000,00", matricula="101.010", data_vistoria="19/06/2025",
+                     responsavel_nome="Guilherme Rocha", responsavel_registro="CREA-SP 501010"),
+    "laudo_17": dict(endereco="Rua Harmonia, 44, Vila Madalena", cidade="São Paulo", uf="SP", area_privativa_m2="70 m²",
+                     area_total_m2=(None, CONTRA, ["95 m²", "92 m²"]), ano_construcao="2015",
+                     valor_avaliacao="R$ 610.000,00", matricula="176.543", data_vistoria="25/06/2025",
+                     onus_descricao="não há ônus, segundo declaração do proprietário; certidão não anexada.",
+                     responsavel_nome="Marina Albuquerque", responsavel_registro="CREA-SP 5061234567"),
+}
+# Campos de classificação: (categoria, trecho do laudo que a sustenta)
+ORACULO_TIPO = {
+    "laudo_01": ("apartamento", "Imóvel: apartamento residencial"), "laudo_02": ("casa", "Trata-se de uma casa térrea"),
+    "laudo_03": ("comercial", "vistoriamos a sala comercial 503"), "laudo_04": ("terreno", "Tipo: terreno urbano"),
+    "laudo_05": ("rural", "Objeto: imóvel rural denominado Sítio Boa Vista"),
+    "laudo_06": ("apartamento", "Apartamento situado à Rua das Palmeiras"), "laudo_07": ("casa", "Casa geminada, Rua Azul, 33"),
+    "laudo_08": ("comercial", "Imóvel: loja térrea com sobreloja"), "laudo_09": ("casa", "Casa residencial na Alameda das Flores 88"),
+    "laudo_10": ("apartamento", "apartamento no Condomínio Parque Norte"), "laudo_11": ("terreno", "Terreno para incorporação"),
+    "laudo_12": ("casa", "Tipo de propriedade: casa de alto padrão"), "laudo_13": ("apartamento", "Apartamento, Av. Brasil 1770"),
+    "laudo_14": ("galpao", "Identificação: galpão industrial"), "laudo_15": ("casa", "Imóvel residencial: casa"),
+    "laudo_16": ("comercial", "Unidade comercial 14, Rua do Sol, 250"),
+    "laudo_17": ("apartamento", "apartamento residencial na Rua Harmonia"),
+}
+ORACULO_ONUS = {
+    "laudo_01": ("sem_onus", "Ônus: não foram identificados ônus na certidão analisada."),
+    "laudo_02": ("sem_onus", "Certidão: sem gravames conhecidos."),
+    "laudo_03": ("com_onus", "Consta alienação fiduciária em favor de instituição financeira"),
+    "laudo_05": ("com_onus", "Ônus: reserva legal registrada"), "laudo_07": ("com_onus", "Há penhora averbada"),
+    "laudo_08": ("nao_verificado", "Ônus: não foi possível verificar por ausência de certidão."),
+    "laudo_09": ("sem_onus", "A certidão indica inexistência de ônus reais."),
+    "laudo_10": ("com_onus", "Gravames: alienação fiduciária mencionada na matrícula."),
+    "laudo_12": ("com_onus", "Ônus: servidão de passagem registrada."),
+    "laudo_13": ("sem_onus", "Ônus: penhora cancelada, conforme averbação"),
+    "laudo_15": ("com_onus", "A certidão consultada informa hipoteca ativa."),
+    "laudo_17": ("nao_verificado", "Ônus: não há ônus, segundo declaração do proprietário; certidão não anexada."),
+}   # laudos 04, 06, 11, 14 e 16: o laudo só diz que não há informação -> nao_informado
+
+
+def _linha_de(doc, campo, valor):
+    """A linha do laudo que o LLM perfeito citaria: contém o valor e fala do campo."""
+    return next(l for l in doc.splitlines() if nz.valor_no_trecho(campo, valor, l) and nz.ancorado(campo, l))
+
+
+def _resposta_perfeita(laudo):
+    doc = (LAUDOS / f"{laudo}.txt").read_text(encoding="utf-8")
+    g = GABARITO["laudos"][laudo]
+    tipo, trecho_tipo = ORACULO_TIPO[laudo]
+    classe, trecho_onus = ORACULO_ONUS.get(laudo, ("nao_informado", None))
+    r = {"tipo_imovel": {"valor_texto": tipo, "status": "encontrado", "trecho_fonte": trecho_tipo},
+         "onus_situacao": {"valor_texto": classe, "status": "encontrado", "trecho_fonte": trecho_onus}}
+    for campo in CAMPOS:
+        if campo in r:
+            continue
+        v = ORACULO[laudo].get(campo)
+        if v is None:        # o LLM não dá valor: devolve o status "sem valor" que o laudo justifica
+            sem = g[campo]["status"] if g[campo]["status"] in ("nao_informado", "nao_aplicavel") else "nao_informado"
+            r[campo] = {"valor_texto": None, "status": sem, "trecho_fonte": None}
+        elif isinstance(v, tuple) and v[1] == CONTRA:
+            r[campo] = {"valor_texto": None, "status": CONTRA, "valores_conflitantes": v[2],
+                        "trecho_fonte": _linha_de(doc, campo, v[2][0])}
+        else:
+            texto, status = v if isinstance(v, tuple) else (v, "encontrado")
+            r[campo] = {"valor_texto": texto, "status": status, "trecho_fonte": _linha_de(doc, campo, texto)}
+    return doc, RespostaLLM.model_validate(r)
+
+
+def test_extrator_perfeito_simulado_da_100():
+    ext = {}
+    for laudo in GABARITO["laudos"]:
+        doc, r = _resposta_perfeita(laudo)
+        ext[laudo] = LaudoExtraido(arquivo=f"{laudo}.txt", modelo="perfeito",
+                                   campos=nz.normalizar_resposta(r, doc)).model_dump()
+    df = av.avaliar(GABARITO, ext)
+    erros = df[(df["resultado"] != "acerto") | ~df["status_igual"]]
+    assert erros.empty, "\n" + erros[["laudo", "campo", "resultado", "esperado", "obtido", "motivo"]].to_string()
+    r = av.resumo(df)
+    assert r["acurácia estrita (valor + status)"] == 1.0 and r["alucinações (valor onde não existe)"] == 0

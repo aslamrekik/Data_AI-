@@ -55,7 +55,8 @@ Um valor plausível sem evidência é o pior erro possível.
 Regras por campo:
 - tipo_imovel: escreva exatamente uma destas categorias: apartamento, casa, comercial
   (sala, loja, unidade comercial), galpao, terreno, rural. trecho_fonte = onde o tipo aparece.
-- endereco: logradouro, número, complemento e bairro, sem cidade, UF e CEP.
+- endereco: copie como está escrito no laudo, NA MESMA ORDEM, retirando só cidade, UF e CEP.
+  Não reordene nem complete (logradouro, número, complemento e bairro podem vir em qualquer ordem).
 - cidade e uf: uf é a sigla de 2 letras.
 - Áreas, conforme o tipo:
     apartamento e sala/unidade comercial em edifício: area_privativa_m2 e area_total_m2
@@ -78,7 +79,11 @@ Regras por campo:
                       só declaração do proprietário);
     nao_informado  -> o laudo não fala de ônus ou diz não ter a informação.
   Silêncio NUNCA é sem_onus. Use status encontrado.
-- onus_descricao: o que o laudo diz sobre ônus, copiado. Se não disser nada -> nao_informado.
+- onus_descricao: só tem valor quando o laudo diz algo SUBSTANTIVO sobre ônus: a situação
+  (há ou não há ônus, qual) ou uma tentativa de verificação (ex.: "não foi possível verificar
+  por ausência de certidão"). Copie esse texto. Frases que só dizem que não há informação
+  ("sem informação", "não consta informação", "não há menção a ônus", "nada informado")
+  -> nao_informado, com valor_texto null.
 - data_vistoria: data da vistoria, inspeção, visita ou levantamento, como escrita.
 - responsavel_nome: nome do responsável técnico, sem título (Eng., Arq.).
 - responsavel_registro: conselho e número como escritos (ex.: "CREA-SP 5061234567").
