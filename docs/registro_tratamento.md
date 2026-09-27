@@ -4,17 +4,17 @@ Arquivo: `propostas_credito.csv` — 6400 linhas lidas, 6400 linhas mantidas, **
 
 | # | Problema | Coluna | Linhas | Ação | Por quê | Exemplos |
 |---|---|---|---|---|---|---|
-| 1 | IDs duplicados | `id_proposta` | 0 | Verificado; nada a fazer | Duplicata inflaria volume e conversão. |  |
-| 2 | Linhas idênticas com IDs diferentes | `todas` | 0 | Verificado; nada a fazer | Checa reenvio da mesma proposta com ID novo. |  |
-| 3 | Canal com variações de escrita | `canal_origem` | 4 | Padronizado para 5 rótulos oficiais | Sem isso, 'mídia paga ' vira um 6º canal e some da comparação. | indicação , mídia paga , organico  |
-| 4 | Número gravado como texto com 'R$' | `valor_imovel` | 3 | Removido 'R$' e convertido | Valor é legítimo; só o formato está errado. Descartar perderia a proposta. | PR-000705, PR-002801, PR-006000 |
-| 5 | Data de entrada em dd/mm/aaaa (resto em ISO) | `data_entrada` | 3 | Lida como dia/mês/ano | 2 ambígua(s) (dia ≤ 12, poderia ser mês/dia). Conferência com assinatura − tempo_analise_dias: 2 de 2 com assinatura batem; ambíguas sem conferência: PR-000151. Atenção: abrir o CSV no Excel inverte dia e mês nesses casos. | PR-000151, PR-000152, PR-000153 |
-| 6 | Data de entrada vazia ou ilegível | `data_entrada` | 0 | Verificado; nada a fazer | Não inventar data. |  |
-| 7 | Data de assinatura ilegível | `data_assinatura_contrato` | 0 | Verificado; nada a fazer | Preenchida na origem mas em formato desconhecido: não é vazio estrutural. |  |
-| 8 | Assinatura anterior à entrada | `data_assinatura_contrato` | 1 | Mantida + flag; fora das métricas de tempo | Status 'Contratada' é coerente com o resto da linha, então conta na conversão; só a data é suspeita. | PR-001556 |
-| 9 | Assinatura - entrada ≠ tempo_analise_dias | `tempo_analise_dias` | 0 | Verificado; nada a fazer | Checagem cruzada entre duas colunas de tempo. |  |
-| 10 | Status com variação de caixa/espaço | `status_final` | 0 | Verificado; nada a fazer | 'contratada ' fora do rótulo não contaria como conversão. |  |
-| 11 | Status desconhecido | `status_final` | 0 | Verificado; nada a fazer | Não reclassificar sem regra de negócio. |  |
+| 1 | Canal com variações de escrita | `canal_origem` | 4 | Padronizado para 5 rótulos oficiais | Sem isso, 'mídia paga ' vira um 6º canal e some da comparação. | indicação , mídia paga , organico  |
+| 2 | Número gravado como texto com 'R$' | `valor_imovel` | 3 | Removido 'R$' e convertido | Valor é legítimo; só o formato está errado. Descartar perderia a proposta. | PR-000705, PR-002801, PR-006000 |
+| 3 | Data de entrada em dd/mm/aaaa (resto em ISO) | `data_entrada` | 3 | Lida como dia/mês/ano | 2 ambígua(s) (dia ≤ 12, poderia ser mês/dia). Conferência com assinatura − tempo_analise_dias: 2 de 2 com assinatura batem; ambíguas sem conferência: PR-000151. Atenção: abrir o CSV no Excel inverte dia e mês nesses casos. | PR-000151, PR-000152, PR-000153 |
+| 4 | Data de entrada vazia ou ilegível | `data_entrada` | 0 | Verificado; nada a fazer | Não inventar data. |  |
+| 5 | Data de assinatura ilegível | `data_assinatura_contrato` | 0 | Verificado; nada a fazer | Preenchida na origem mas em formato desconhecido: não é vazio estrutural. |  |
+| 6 | Assinatura anterior à entrada | `data_assinatura_contrato` | 1 | Mantida + flag; fora das métricas de tempo | Status 'Contratada' é coerente com o resto da linha, então conta na conversão; só a data é suspeita. | PR-001556 |
+| 7 | Assinatura - entrada ≠ tempo_analise_dias | `tempo_analise_dias` | 0 | Verificado; nada a fazer | Checagem cruzada entre duas colunas de tempo. |  |
+| 8 | Status com variação de caixa/espaço | `status_final` | 0 | Verificado; nada a fazer | 'contratada ' fora do rótulo não contaria como conversão. |  |
+| 9 | Status desconhecido | `status_final` | 0 | Verificado; nada a fazer | Não reclassificar sem regra de negócio. |  |
+| 10 | IDs duplicados | `id_proposta` | 0 | Verificado; nada a fazer | Duplicata inflaria volume e conversão. |  |
+| 11 | Linhas idênticas com IDs diferentes | `todas` | 0 | Verificado; nada a fazer | Checa reenvio da mesma proposta com ID novo, comparando valores já normalizados. |  |
 | 12 | Etapa acima de 6 em proposta Contratada | `etapa_max_funil` | 1 | Corrigida para 6 + flag; original em etapa_max_funil_original | Contratação É a etapa 6, então o status resolve a ambiguidade. | PR-000081 |
 | 13 | Etapa vazia, não inteira ou fora de 1–6 sem regra de correção | `etapa_max_funil` | 0 | Verificado; nada a fazer | Só etapa > 6 em Contratada tem correção definida; o resto não é adivinhado. |  |
 | 14 | Status incoerente com etapa/assinatura/taxa | `status_final` | 0 | Verificado; nada a fazer | Contratada deve ter etapa 6, data de assinatura e taxa. |  |

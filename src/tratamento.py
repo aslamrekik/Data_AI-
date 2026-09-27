@@ -208,28 +208,16 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             reg.add("Espaços extras no texto", c, mud, "strip()",
                     "Mesmo valor escrito com espaço vira categoria duplicada.")
 
-    # 2. Duplicidade
-    dup_id = df["id_proposta"].duplicated(keep=False)
-    reg.add("IDs duplicados", "id_proposta", dup_id.sum(),
-            "Verificado; nada a fazer" if not dup_id.any() else "Mantidos + flag",
-            "Duplicata inflaria volume e conversão.")
-    dup_conteudo = df.drop(columns="id_proposta").duplicated(keep=False)
-    reg.add("Linhas idênticas com IDs diferentes", "todas", dup_conteudo.sum(),
-            "Verificado; nada a fazer" if not dup_conteudo.any() else "Mantidas + flag",
-            "Checa reenvio da mesma proposta com ID novo.")
-    df["flag_duplicada"] = dup_id | dup_conteudo
-
-    # 3. Canal de origem: caixa, acento e espaço inconsistentes
-    chave = df["canal_origem"].str.lower().map(_sem_acento)
-    variantes = bruto["canal_origem"][~bruto["canal_origem"].isin(CANAIS.values())]
+    # 3. Canal de origem: caixa, acento e espaço (inclusive interno) inconsistentes
+    chave = df["canal_origem"].map(lambda t: " ".join(_sem_acento(t).lower().split()))
     df["canal_origem"] = chave.map(CANAIS)
     desconhecido = df["canal_origem"].isna()
     df.loc[desconhecido, "canal_origem"] = "Desconhecido"
-    reg.add("Canal com variações de escrita", "canal_origem",
-            (bruto["canal_origem"] != df["canal_origem"]).sum(),
-            "Padronizado para 5 rótulos oficiais",
+    variou = (bruto["canal_origem"] != df["canal_origem"]) & ~desconhecido
+    reg.add("Canal com variações de escrita", "canal_origem", variou.sum(),
+            _acao(variou, "Padronizado para 5 rótulos oficiais"),
             "Sem isso, 'mídia paga ' vira um 6º canal e some da comparação.",
-            sorted(variantes.unique().tolist()))
+            sorted(bruto.loc[variou, "canal_origem"].unique().tolist()))
     if desconhecido.any():
         reg.add("Canal fora da lista conhecida", "canal_origem",
                 desconhecido.sum(), "Marcado como 'Desconhecido'",
@@ -334,6 +322,21 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "Não reclassificar sem regra de negócio.",
             df.loc[status_novo, "status_final"].unique().tolist())
     contratada = df["status_final"] == "Contratada"
+
+    # 7b. Duplicidade: depois de normalizar formato de número, data, canal e
+    # status, para pegar a mesma proposta escrita de outro jeito
+    dup_id = df["id_proposta"].duplicated(keep=False)
+    reg.add("IDs duplicados", "id_proposta", dup_id.sum(),
+            _acao(dup_id, "Mantidos + flag"),
+            "Duplicata inflaria volume e conversão.",
+            df.loc[dup_id, "id_proposta"].unique().tolist())
+    conteudo = [c for c in COLUNAS_OBRIGATORIAS if c != "id_proposta"]
+    dup_conteudo = df[conteudo].duplicated(keep=False)
+    reg.add("Linhas idênticas com IDs diferentes", "todas", dup_conteudo.sum(),
+            _acao(dup_conteudo, "Mantidas + flag"),
+            "Checa reenvio da mesma proposta com ID novo, comparando valores "
+            "já normalizados.", df.loc[dup_conteudo, "id_proposta"].tolist())
+    df["flag_duplicada"] = dup_id | dup_conteudo
 
     # 8. Etapa do funil: escala 1–6; valor original sempre preservado
     etapa = df["etapa_max_funil"]
