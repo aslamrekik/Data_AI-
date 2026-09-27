@@ -149,3 +149,57 @@ def test_laudo_ausente_conta_como_abstencao_e_nao_quebra():
 ])
 def test_equivalencia(campo, esperado, obtido, ok):
     assert av.equivale(campo, esperado, obtido) is ok
+
+
+# ---------------------------------------------------------------- bugs do normalizador (revisão)
+@pytest.mark.parametrize("txt, esperado", [
+    ("Ano de referência: 2005", 2005),        # N1: 'Ano' não é idade (antes virava 20)
+    ("Ano informado: 2012", 2012),
+    ("Ano 2003", 2003),
+])
+def test_ano_com_a_palavra_ano_nao_vira_idade(txt, esperado):
+    assert nz.ano(txt, "inferido", 2025) == esperado
+
+
+@pytest.mark.parametrize("txt", [
+    "Área privativa 61m² e área total 84m²",   # N2: dois números -> ambíguo (antes pegava 61)
+    "R$ 0,00",                                 # N3: valor não positivo
+])
+def test_numero_ambiguo_ou_nao_positivo_falha(txt):
+    with pytest.raises(ValueError):
+        nz.numero_br(txt)
+
+
+@pytest.mark.parametrize("txt, esperado", [
+    ("R$ 3,9 milhões", 3_900_000),            # N3: escala (antes 3,9)
+    ("R$ 1,2 mi", 1_200_000),
+    ("850 mil", 850_000),
+    ("120 m² (nao ha ônus)", 120),            # N6: 'ha' solto não é hectare (antes 1.200.000)
+    ("12 hectares", 120_000),
+])
+def test_numero_br_escala_e_hectare(txt, esperado):
+    assert nz.numero_br(txt) == pytest.approx(esperado)
+
+
+@pytest.mark.parametrize("txt, esperado", [
+    ("3º Ofício, matrícula 45.981", "45981"),  # N4: antes '3'
+    ("Registro imobiliário nº 45.981, Cartório do 3º Ofício", "45981"),
+    ("Matrícula 32.110-A", "32110"),
+])
+def test_matricula_prefere_o_numero_da_matricula(txt, esperado):
+    assert nz.matricula(txt) == esperado
+
+
+@pytest.mark.parametrize("txt, esperado", [
+    ("12/03/25", "2025-03-12"),               # N7: formatos que antes falhavam
+    ("12.03.2025", "2025-03-12"),
+    ("1º de abril de 2025", "2025-04-01"),
+])
+def test_data_iso_formatos_extras(txt, esperado):
+    assert nz.data_iso(txt) == esperado
+
+
+def test_uf_inexistente_falha():               # N8: antes qualquer par de letras passava
+    with pytest.raises(ValueError):
+        nz._converter("uf", "XY", "encontrado", None)
+    assert nz._converter("uf", "sp", "encontrado", None) == "SP"

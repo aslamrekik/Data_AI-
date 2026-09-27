@@ -14,6 +14,8 @@ from datetime import date
 from schema import CAMPOS, SITUACOES_ONUS, TIPOS_IMOVEL, CampoFinal, CampoLLM, RespostaLLM
 
 CAMPOS_AREA = {"area_privativa_m2", "area_total_m2", "area_construida_m2", "area_terreno_m2"}
+UFS = {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB",
+       "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"}
 MESES = {"janeiro": 1, "fevereiro": 2, "marco": 3, "abril": 4, "maio": 5, "junho": 6,
          "julho": 7, "agosto": 8, "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12}
 
@@ -39,20 +41,34 @@ def evidencia_existe(trecho: str | None, documento: str) -> bool:
 # Números, datas, anos
 # ----------------------------------------------------------------------------
 def numero_br(txt: str) -> float:
-    """'78,40 m²' -> 78.4 | 'R$ 3.900.000' -> 3900000 | '4,8 ha' -> 48000 (m²)."""
+    """'78,40 m²' -> 78.4 | 'R$ 3.900.000' -> 3900000 | '4,8 ha' -> 48000 (m²) | 'R$ 3,9 milhões' -> 3900000.
+
+    Exige exatamente UM número (sem contar o '2' de 'm2'): um texto com dois
+    números ('privativa 61 m² e total 84 m²') é ambíguo e falha.
+    """
     alvo = txt.split("R$", 1)[1] if "R$" in txt else txt  # valor por extenso + (R$ ...)
-    m = re.search(r"\d[\d.,]*", alvo)
-    if not m:
+    alvo = re.sub(r"(?<=[\d\s])m[2²]", " m² ", alvo)       # o '2' da unidade não é número
+    numeros = re.findall(r"\d[\d.,]*", alvo)
+    if not numeros:
         raise ValueError(f"sem número em {txt!r}")
-    bruto = m.group().rstrip(".,")
+    if len(numeros) > 1:
+        raise ValueError(f"mais de um número em {txt!r}: ambíguo")
+    bruto = numeros[0].rstrip(".,")
     if "," in bruto:
         n = float(bruto.replace(".", "").replace(",", "."))
     elif re.fullmatch(r"\d{1,3}(\.\d{3})+", bruto):
         n = float(bruto.replace(".", ""))
     else:
         n = float(bruto)
-    if re.search(r"\bha\b|hectare", alvo, flags=re.I):
+    depois = compactar(alvo[alvo.index(numeros[0]) + len(numeros[0]):])
+    if re.match(r"(ha|hectares?)\b", depois):             # só a unidade logo após o número
         n *= 10_000
+    elif re.match(r"(milhao|milhoes|mi)\b", depois):
+        n *= 1_000_000
+    elif re.match(r"mil\b", depois):
+        n *= 1_000
+    if n <= 0:
+        raise ValueError(f"valor não positivo em {txt!r}")
     return n
 
 
@@ -61,9 +77,10 @@ def data_iso(txt: str) -> str:
     t = compactar(txt)
     if m := re.search(r"(\d{4})-(\d{2})-(\d{2})", t):
         a, mes, d = map(int, m.groups())
-    elif m := re.search(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", t):
+    elif m := re.search(r"(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b", t):
         d, mes, a = map(int, m.groups())
-    elif m := re.search(r"(\d{1,2}) de ([a-z]+) de (\d{4})", t):
+        a = a + 2000 if a < 100 else a                        # '12/03/25' -> 2025
+    elif m := re.search(r"(\d{1,2})o? de ([a-z]+) de (\d{4})", t):   # '1º de abril' vira '1o de abril'
         d, mes, a = int(m.group(1)), MESES.get(m.group(2)), int(m.group(3))
         if mes is None:
             raise ValueError(f"mês desconhecido em {txt!r}")
@@ -73,14 +90,16 @@ def data_iso(txt: str) -> str:
 
 
 def ano(txt: str, status: str, ano_vistoria: int | None) -> int:
-    """Ano explícito ('2014') ou, se inferido, ano da vistoria menos a idade ('11 anos')."""
-    if status == "inferido" and re.search(r"\banos?\b", txt, flags=re.I):
+    """Ano explícito ('2014') ou, se inferido, ano da vistoria menos a idade ('11 anos').
+
+    Idade é número seguido de 'ano(s)'. A palavra 'Ano' em 'Ano de referência: 2005'
+    não é idade: ali o valor é o próprio ano.
+    """
+    idade = re.search(r"\b(\d{1,3})\s*anos?\b", txt, flags=re.I)
+    if status == "inferido" and idade:
         if ano_vistoria is None:
             raise ValueError("idade informada, mas sem data de vistoria para calcular o ano")
-        idade = re.search(r"\d+", txt)
-        if not idade:
-            raise ValueError(f"idade sem número em {txt!r}")
-        return ano_vistoria - int(idade.group())
+        return ano_vistoria - int(idade.group(1))
     m = re.search(r"\b(1[89]\d{2}|20\d{2})\b", txt)
     if not m:
         raise ValueError(f"ano não reconhecido em {txt!r}")
@@ -88,11 +107,19 @@ def ano(txt: str, status: str, ano_vistoria: int | None) -> int:
 
 
 def matricula(txt: str) -> str:
-    """'184.772 do 14º CRI' -> '184772' (só o primeiro número)."""
-    m = re.search(r"\d[\d.]*", txt)
-    if not m:
+    """'184.772 do 14º CRI' -> '184772' | '3º Ofício, matrícula 45.981' -> '45981'.
+
+    Prefere o número logo depois de 'matrícula', 'nº' ou 'registro'; sem essas
+    palavras, o número mais longo (o do cartório, '14º', é curto).
+    """
+    t = compactar(txt)
+    m = re.search(r"(?:matricula|registro|\bn[o°]\.?)[^\d]{0,20}(\d[\d.]*)", t)
+    if m:
+        return m.group(1).rstrip(".").replace(".", "")
+    numeros = [n.rstrip(".").replace(".", "") for n in re.findall(r"\d[\d.]*", t)]
+    if not numeros:
         raise ValueError(f"matrícula sem número em {txt!r}")
-    return m.group().rstrip(".").replace(".", "")
+    return max(numeros, key=len)
 
 
 def categoria(txt: str, permitidas: list[str]) -> str:
@@ -116,7 +143,7 @@ def _converter(nome: str, txt: str, status: str, ano_vistoria: int | None):
         return matricula(txt)
     if nome == "uf":
         uf = txt.strip().upper()
-        if not re.fullmatch(r"[A-Z]{2}", uf):
+        if uf not in UFS:
             raise ValueError(f"UF inválida {txt!r}")
         return uf
     if nome == "tipo_imovel":
