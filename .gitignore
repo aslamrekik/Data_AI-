@@ -6,3 +6,12 @@ parte2_relatorio/logs/*
 !parte2_relatorio/logs/.gitkeep
 parte2_relatorio/output/*
 !parte2_relatorio/output/.gitkeep
+
+# Segredos: a chave do Gemini fica só no .env local
+.env
+.env.*
+!.env.example
+
+# Saídas da Parte 3: só a avaliação é versionada
+parte3_laudos/saida/*
+!parte3_laudos/saida/avaliacao.md
