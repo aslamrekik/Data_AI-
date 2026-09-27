@@ -484,3 +484,57 @@ def test_extrator_perfeito_simulado_da_100():
     assert erros.empty, "\n" + erros[["laudo", "campo", "resultado", "esperado", "obtido", "motivo"]].to_string()
     r = av.resumo(df)
     assert r["acurácia estrita (valor + status)"] == 1.0 and r["alucinações (valor onde não existe)"] == 0
+
+
+# ---------------------------------------------------------------- execução com cota limitada (rodada real)
+_COTA_DIA = genai_errors.ClientError(429, {"error": {"code": 429, "message": "Quota exceeded. Please retry in 19.5s.",
+    "status": "RESOURCE_EXHAUSTED", "details": [
+        {"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+         "violations": [{"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier"}]},
+        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "19s"}]}})
+_COTA_MINUTO = genai_errors.ClientError(429, {"error": {"code": 429, "message": "Please retry in 7.2s.",
+    "status": "RESOURCE_EXHAUSTED", "details": [
+        {"@type": "type.googleapis.com/google.rpc.QuotaFailure",
+         "violations": [{"quotaId": "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"}]}]}})
+_SOBRECARGA = genai_errors.ServerError(503, {"error": {"code": 503, "message": "high demand", "status": "UNAVAILABLE"}})
+
+
+def test_cota_diaria_para_a_execucao_na_primeira_tentativa(saida_tmp):   # item 1
+    cliente = _ClienteFalso([_COTA_DIA] * 3)
+    with pytest.raises(ex.ErroFatal, match="cota diária"):
+        ex.extrair_laudo(LAUDOS / "laudo_07.txt", cliente, "m")
+    assert len(cliente.chamadas) == 1
+
+
+def test_cota_por_minuto_espera_o_que_a_api_pede(saida_tmp, monkeypatch):  # item 2
+    esperas = []
+    monkeypatch.setattr(ex.time, "sleep", esperas.append)
+    cliente = _ClienteFalso([_COTA_MINUTO, _resposta().model_dump_json()])
+    x = ex.extrair_laudo(LAUDOS / "laudo_01.txt", cliente, "m", espera=1)
+    assert x.erro is None and esperas == [7.2]
+
+
+def test_sobrecarga_503_tenta_no_maximo_2_vezes(saida_tmp):                # item 2
+    cliente = _ClienteFalso([_SOBRECARGA] * 5)
+    x = ex.extrair_laudo(LAUDOS / "laudo_01.txt", cliente, "m")
+    assert x.erro and len(cliente.chamadas) == 2
+
+
+def test_falha_nova_nao_apaga_sucesso_anterior():                          # item 3
+    ok = LaudoExtraido(arquivo="laudo_01.txt", modelo="m", campos={}).model_dump()
+    falha = LaudoExtraido.vazio("laudo_01.txt", "m", "503").model_dump()
+    assert ex.mesclar({"laudo_01": ok}, {"laudo_01": falha})["laudo_01"] == ok
+    assert ex.mesclar({"laudo_02": falha}, {"laudo_02": ok})["laudo_02"] == ok
+
+
+def test_pendentes_pega_so_os_que_faltam():                                # item 3
+    ok = {"erro": None}
+    arquivos = [LAUDOS / f"laudo_0{i}.txt" for i in (1, 2, 3)]
+    anteriores = {"laudo_01": ok, "laudo_02": {"erro": "429"}}
+    assert [a.stem for a in ex.pendentes(arquivos, anteriores)] == ["laudo_02", "laudo_03"]
+
+
+def test_function_calling_automatico_desligado():                         # item 4
+    cliente = _ClienteFalso([_resposta().model_dump_json()])
+    ex.chamar_gemini(cliente, "m", "texto")
+    assert cliente.chamadas[0].config.automatic_function_calling.disable is True

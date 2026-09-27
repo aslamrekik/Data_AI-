@@ -9,6 +9,7 @@ Fluxo por laudo:
 Uso (a partir da raiz do repositório):
     python parte3_laudos/extrator.py                 # todos os laudos
     python parte3_laudos/extrator.py --laudo laudo_17 # um só
+    python parte3_laudos/extrator.py --pendentes      # só os que ainda não deram certo
 
 Requer GEMINI_API_KEY no arquivo .env (ver .env.example).
 """
@@ -18,6 +19,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import secrets
 import sys
 import time
@@ -118,6 +120,19 @@ def _erro_fatal(e: Exception) -> bool:
     return isinstance(e, errors.ClientError) and getattr(e, "code", None) in CODIGOS_FATAIS
 
 
+def _cota_diaria(e: Exception) -> bool:
+    """429 da cota POR DIA: tentar de novo só gasta o que não existe mais até amanhã.
+    (O 429 por minuto é recuperável e continua com nova tentativa.)"""
+    return getattr(e, "code", None) == 429 and "PerDay" in str(e)
+
+
+def _espera_sugerida(e: Exception) -> float:
+    """Segundos que a própria API pede para esperar ('retryDelay': '19s' / 'retry in 19.5s')."""
+    m = re.search(r"retryDelay'?\"?:\s*'?\"?(\d+(?:\.\d+)?)s", str(e)) or \
+        re.search(r"retry in (\d+(?:\.\d+)?)s", str(e))
+    return float(m.group(1)) if m else 0.0
+
+
 def chamar_gemini(cliente, modelo: str, documento: str) -> str:
     """Devolve o texto bruto da resposta. A validação fica com quem chama, DEPOIS de salvar o
     bruto, para que uma resposta fora do schema possa ser inspecionada."""
@@ -132,12 +147,14 @@ def chamar_gemini(cliente, modelo: str, documento: str) -> str:
             temperature=0,
             response_mime_type="application/json",
             response_schema=RespostaLLM,
+            # não usamos ferramentas: desliga o "automatic function calling" (e o aviso no log)
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         ),
     )
     return resp.text or ""
 
 
-def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 3,
+def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 2,
                   espera: float = 5.0) -> LaudoExtraido:
     documento = caminho.read_text(encoding="utf-8")
     DIR_SAIDA.joinpath("brutas").mkdir(parents=True, exist_ok=True)
@@ -157,51 +174,83 @@ def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 3,
         except ValidationError as e:
             ultimo_erro = f"resposta fora do schema: {e.error_count()} erro(s); bruto em {destino_bruto}"
         except Exception as e:  # erro de rede, cota, chave etc.
+            if _cota_diaria(e):
+                raise ErroFatal("cota diária do Gemini esgotada; rode de novo amanhã com "
+                                "--pendentes") from e
             if _erro_fatal(e):
                 raise ErroFatal(f"{type(e).__name__}: {e}") from e
             ultimo_erro = f"{type(e).__name__}: {e}"
-        log.warning("%s: tentativa %d/%d falhou (%s)", caminho.stem, t, tentativas, ultimo_erro)
+            pausa = max(espera * t, _espera_sugerida(e))
+        else:
+            pausa = espera * t
+        log.warning("%s: tentativa %d/%d falhou (%s)", caminho.stem, t, tentativas, ultimo_erro[:200])
         if t < tentativas:                                          # não espera depois da última
-            time.sleep(espera * t)
+            time.sleep(pausa)
     log.error("%s: desistindo após %d tentativas", caminho.stem, tentativas)
     return LaudoExtraido.vazio(caminho.name, modelo, ultimo_erro)
+
+
+def mesclar(anteriores: dict, novos: dict) -> dict:
+    """Junta as extrações: uma falha nova nunca apaga um sucesso anterior."""
+    saida = dict(anteriores)
+    for laudo, x in novos.items():
+        if x.get("erro") and laudo in saida and not saida[laudo].get("erro"):
+            log.warning("%s: falhou agora, mas mantenho a extração anterior que deu certo", laudo)
+            continue
+        saida[laudo] = x
+    return saida
+
+
+def pendentes(arquivos: list[Path], anteriores: dict) -> list[Path]:
+    """Laudos ainda sem extração bem-sucedida."""
+    return [a for a in arquivos if a.stem not in anteriores or anteriores[a.stem].get("erro")]
 
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Extrai campos dos laudos com o Gemini.")
     p.add_argument("--laudo", help="nome do arquivo sem extensão, ex.: laudo_17")
+    p.add_argument("--pendentes", action="store_true",
+                   help="extrai só os laudos que ainda não têm extração bem-sucedida")
     p.add_argument("--pausa", type=float, default=4.0,
                    help="segundos entre laudos (respeita o limite do nível gratuito)")
     a = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    DIR_SAIDA.mkdir(parents=True, exist_ok=True)
+    destino = DIR_SAIDA / "extracoes.json"
+    anteriores = json.loads(destino.read_text(encoding="utf-8")) if destino.exists() else {}
+
     arquivos = sorted(DIR_LAUDOS.glob(f"{a.laudo or 'laudo_*'}.txt"))
+    if a.pendentes:
+        arquivos = pendentes(arquivos, anteriores)
+        log.info("Pendentes: %s", [x.stem for x in arquivos] or "nenhum")
+        if not arquivos:
+            return
     if not arquivos:
         sys.exit(f"Nenhum laudo encontrado em {DIR_LAUDOS}")
     cliente = cliente_gemini()
     modelo = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
-    resultados, fatal = {}, None
+    novos, fatal = {}, None
     for i, arq in enumerate(arquivos):
         log.info("Extraindo %s (%d/%d) com %s", arq.name, i + 1, len(arquivos), modelo)
         try:
-            resultados[arq.stem] = extrair_laudo(arq, cliente, modelo).model_dump()
+            novos[arq.stem] = extrair_laudo(arq, cliente, modelo).model_dump()
         except ErroFatal as e:
             fatal = e
             break
+        # grava a cada laudo: uma interrupção não perde o que já foi extraído
+        destino.write_text(json.dumps(mesclar(anteriores, novos), ensure_ascii=False, indent=2),
+                           encoding="utf-8")
         if i < len(arquivos) - 1:
             time.sleep(a.pausa)
 
-    DIR_SAIDA.mkdir(parents=True, exist_ok=True)
-    destino = DIR_SAIDA / "extracoes.json"
-    anteriores = json.loads(destino.read_text(encoding="utf-8")) if destino.exists() and a.laudo else {}
-    anteriores.update(resultados)
-    destino.write_text(json.dumps(anteriores, ensure_ascii=False, indent=2), encoding="utf-8")
-    falhas = [k for k, v in resultados.items() if v["erro"]]
-    log.info("Salvo em %s. Laudos com falha: %s", destino, falhas or "nenhum")
+    final = mesclar(anteriores, novos)
+    destino.write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
+    falhas = [k for k, v in final.items() if v["erro"]]
+    log.info("Salvo em %s. Laudos ainda sem extração: %s", destino, falhas or "nenhum")
     if fatal:
-        sys.exit(f"Execução interrompida por erro não recuperável (confira GEMINI_API_KEY e "
-                 f"GEMINI_MODEL no .env): {fatal}")
+        sys.exit(f"Execução interrompida: {fatal}")
 
 
 if __name__ == "__main__":
