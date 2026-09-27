@@ -6,6 +6,8 @@
 bari_desafio/
 ├── data/raw/                  # dados brutos (entrada)
 ├── src/tratamento.py          # funções de leitura e tratamento
+├── tests/                     # testes do tratamento (pytest)
+├── docs/registro_tratamento.md  # registro gerado pelo tratamento
 ├── parte1_analise.ipynb       # Parte 1 — análise exploratória
 ├── parte2_relatorio/
 │   ├── relatorio_semanal.py   # gera o relatório semanal
@@ -23,6 +25,14 @@ bari_desafio/
 ```
 
 ## Como executar
+
+Requer Python >= 3.11.
+
+```
+pip install -r requirements.txt
+python src/tratamento.py   # gera data/processed/ e docs/registro_tratamento.md
+pytest                     # testes do tratamento
+```
 
 - **Parte 1:** `jupyter notebook parte1_analise.ipynb` (a partir da raiz do projeto)
 - **Parte 2:** `python parte2_relatorio/relatorio_semanal.py` ou `parte2_relatorio\rodar_relatorio.bat`
