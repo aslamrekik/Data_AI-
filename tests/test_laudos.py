@@ -601,3 +601,30 @@ def test_valor_em_mais_de_uma_linha_do_mesmo_campo_continua_rebaixado():
 
 def test_prompt_pede_a_linha_inteira_como_trecho():
     assert "LINHA INTEIRA" in ex.INSTRUCOES and "Nunca cite só o valor" in ex.INSTRUCOES
+
+
+# ---------------------------------------------------------------- resumo separa falha de qualidade (rodada real)
+def test_acuracia_nos_laudos_extraidos_separa_cota_de_qualidade():         # item 7
+    ext = {k: LaudoExtraido.vazio(f"{k}.txt", "m", "429").model_dump() for k in GABARITO["laudos"]}
+    ext["laudo_04"] = _extracao_perfeita()["laudo_04"] | {"erro": None}
+    r = av.resumo(av.avaliar(GABARITO, ext))
+    assert r["laudos com falha na extração"] == 16
+    assert r["acurácia nos laudos extraídos"] == 1.0
+    assert r["acurácia (valor)"] == pytest.approx(16 / 272)
+
+
+def test_avaliacao_md_mostra_campos_com_evidencia_localizada():             # item 6
+    ext = _extracao_perfeita()
+    ext["laudo_01"]["campos"]["uf"] |= {"motivo": f"{nz.MOTIVO_LOCALIZADA}; o LLM citou 'SP'"}
+    df = av.avaliar(GABARITO, ext)
+    r = av.resumo(df)
+    assert r["campos aceitos com evidência localizada pelo código"] == 1
+    md = av.relatorio_md(df, r)
+    assert "| campos aceitos com evidência localizada pelo código | 1 |" in md
+    assert "## Evidência localizada pelo código" in md and "o LLM citou 'SP'" in md
+
+
+def test_resumo_sem_nenhum_laudo_extraido_nao_quebra():
+    ext = {k: LaudoExtraido.vazio(f"{k}.txt", "m", "429").model_dump() for k in GABARITO["laudos"]}
+    df = av.avaliar(GABARITO, ext)
+    assert "| acurácia nos laudos extraídos | n/a |" in av.relatorio_md(df, av.resumo(df))

@@ -33,7 +33,7 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from normalizar import compactar, palavras  # noqa: E402
+from normalizar import MOTIVO_LOCALIZADA, compactar, palavras  # noqa: E402
 from schema import CAMPOS  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -123,23 +123,38 @@ def avaliar(gabarito: dict, extracoes: dict) -> pd.DataFrame:
     return pd.DataFrame(linhas)
 
 
+def _localizado(df: pd.DataFrame) -> pd.Series:
+    """Campos aceitos com evidência localizada pelo código (o LLM citou só o valor)."""
+    return df["motivo"].fillna("").str.startswith(MOTIVO_LOCALIZADA) & ~df["status_extrator"].isin(SEM_VALOR)
+
+
 def resumo(df: pd.DataFrame) -> dict:
     g_sem = df["status_gabarito"].isin(SEM_VALOR)
+    extraidos = df[df["resultado"] != "falha_extracao"]
     return {
         "campos avaliados": len(df),
         "laudos com falha na extração": int(df.loc[df["resultado"] == "falha_extracao", "laudo"].nunique()),
         "acurácia (valor)": (df["resultado"] == "acerto").mean(),
+        # sem isto, uma rodada interrompida pela cota parece um extrator ruim
+        "acurácia nos laudos extraídos": (extraidos["resultado"] == "acerto").mean() if len(extraidos) else float("nan"),
         "acurácia estrita (valor + status)": ((df["resultado"] == "acerto") & df["status_igual"]).mean(),
         "cobertura (acertos onde o gabarito tem valor)": (df.loc[~g_sem, "resultado"] == "acerto").mean(),
         "abstenção correta (onde o gabarito não tem valor)": (df.loc[g_sem, "resultado"] == "acerto").mean(),
         "alucinações (valor onde não existe)": int((df["resultado"] == "alucinacao").sum()),
         "erros de valor": int((df["resultado"] == "erro_valor").sum()),
         "abstenções (não sabia, errou para o lado seguro)": int((df["resultado"] == "abstencao").sum()),
+        "campos aceitos com evidência localizada pelo código": int(_localizado(df).sum()),
     }
 
 
+def _fmt(v) -> str:
+    if isinstance(v, float):
+        return "n/a" if v != v else f"{v:.1%}"
+    return str(v)
+
+
 def relatorio_md(df: pd.DataFrame, r: dict) -> str:
-    fmt = lambda v: f"{v:.1%}" if isinstance(v, float) else str(v)
+    fmt = _fmt
     linhas = ["# Avaliação da extração de laudos", "",
               "Critério de acerto: ver docstring de `avaliar.py`. Alucinação é o erro mais grave.", "",
               "## Resumo", "", "| Métrica | Valor |", "|---|---|"]
@@ -148,6 +163,12 @@ def relatorio_md(df: pd.DataFrame, r: dict) -> str:
                                aggfunc="count", fill_value=0).reindex(CAMPOS)
     por_campo["acurácia"] = (por_campo.get("acerto", 0) / por_campo.sum(axis=1)).map("{:.0%}".format)
     linhas += ["", "## Por campo", "", tabela_md(por_campo)]
+    loc = df[_localizado(df)]
+    linhas += ["", "## Evidência localizada pelo código", "",
+               "O LLM citou só o valor; o código achou a única linha do laudo que contém o valor e "
+               "fala do campo. Contam como acerto ou erro normalmente.", ""]
+    linhas += [tabela_md(loc[["laudo", "campo", "resultado", "obtido", "motivo"]], index=False)
+               if len(loc) else "Nenhum."]
     erros = df[df["resultado"] != "acerto"]
     linhas += ["", "## Campos que não bateram", ""]
     linhas += [tabela_md(erros[["laudo", "campo", "resultado", "status_gabarito", "status_extrator",
@@ -167,7 +188,7 @@ def main() -> None:
     df.to_csv(BASE / "saida/avaliacao_detalhe.csv", index=False, encoding="utf-8-sig")
     (BASE / "saida/avaliacao.md").write_text(relatorio_md(df, r), encoding="utf-8")
     for k, v in r.items():
-        print(f"{k:55s} {v:.1%}" if isinstance(v, float) else f"{k:55s} {v}")
+        print(f"{k:55s} {_fmt(v)}")
     print(f"\nDetalhe: {BASE / 'saida/avaliacao.md'}")
 
 
