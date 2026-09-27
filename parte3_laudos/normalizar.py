@@ -32,9 +32,51 @@ def compactar(txt: str) -> str:
     return " ".join(sem_acento(txt).lower().split())
 
 
+TRECHO_MIN = 6                                  # "SP" ou "2" existem em qualquer laudo: não provam nada
+CATEGORICOS = {"tipo_imovel", "onus_situacao"}  # valor é uma categoria, não um texto copiado
+_AREA = r"area|m2|ha|hectares?|lote|terreno|superficie|coberta|benfeitorias?"
+# O trecho precisa falar DO CAMPO: "12345" copiado de "CNAI 12345" não é matrícula.
+ANCORAS = {
+    "matricula": r"matricula|registro|rgi|cri|oficio|cartorio",
+    "valor_avaliacao": r"r|valor|avaliacao|preco|mercado",
+    "data_vistoria": r"vistori\w*|inspe\w*|visita|levantamento|data",
+    "ano_construcao": r"ano|anos|constru\w*|idade|edifica\w*|conclusao",
+    "responsavel_registro": r"crea|cau|cnai|registro",
+    **{c: _AREA for c in ("area_privativa_m2", "area_total_m2", "area_construida_m2", "area_terreno_m2")},
+}
+
+
+def palavras(txt: str) -> str:
+    """compactar() sem pontuação: 'R$ 642.000,00' -> 'r 642 000 00'."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", compactar(txt)).split())
+
+
+def contido(parte: str | None, texto: str | None) -> bool:
+    """`parte` aparece em `texto` palavra a palavra ('12345' não casa com '112345')."""
+    return bool(parte and texto and palavras(parte)) and f" {palavras(parte)} " in f" {palavras(texto)} "
+
+
+def ancorado(campo: str, trecho: str | None) -> bool:
+    """O trecho contém uma palavra que identifica o campo (quando o campo tem âncora)."""
+    padrao = ANCORAS.get(campo)
+    return padrao is None or bool(re.search(rf"\b(?:{padrao})\b", palavras(trecho or "")))
+
+
+TEXTOS_LIVRES = {"endereco", "cidade", "onus_descricao", "responsavel_nome"}
+
+
+def valor_no_trecho(campo: str, valor: str, trecho: str | None) -> bool:
+    """Números, datas e códigos: sequência exata dentro do trecho. Textos livres: toda palavra
+    do valor está no trecho (o endereço sem cidade/UF pode não ser contíguo no laudo)."""
+    if campo in TEXTOS_LIVRES:
+        return bool(palavras(valor)) and set(palavras(valor).split()) <= set(palavras(trecho or "").split())
+    return contido(valor, trecho)
+
+
 def evidencia_existe(trecho: str | None, documento: str) -> bool:
-    """O trecho citado pelo LLM precisa existir no laudo (ignorando caixa, acento e espaços)."""
-    return bool(trecho) and compactar(trecho) in compactar(documento)
+    """O trecho citado pelo LLM precisa existir no laudo (ignorando caixa, acento, espaços e
+    pontuação) e ter tamanho mínimo."""
+    return bool(trecho) and len(palavras(trecho)) >= TRECHO_MIN and contido(trecho, documento)
 
 
 # ----------------------------------------------------------------------------
@@ -162,19 +204,44 @@ def normalizar_campo(nome: str, c: CampoLLM, documento: str,
     if c.status in ("nao_informado", "nao_aplicavel"):
         return CampoFinal(valor=None, status=c.status, trecho_fonte=c.trecho_fonte)
 
+    rebaixar = lambda motivo: CampoFinal(status="nao_verificado", trecho_fonte=c.trecho_fonte, motivo=motivo)
+
+    # "inferido" só existe para o ano vindo da idade; em qualquer outro campo é chute
+    if c.status == "inferido" and nome != "ano_construcao":
+        return rebaixar("inferido só é aceito para ano_construcao (idade -> ano)")
+
+    # onus_situacao: "nao_informado" dispensa trecho; as outras classes precisam dele.
+    # Sem trecho, a classificação volta para nao_informado: silêncio nunca é sem_onus.
+    if nome == "onus_situacao":
+        try:
+            classe = categoria(c.valor_texto or "", SITUACOES_ONUS)
+        except ValueError as e:
+            return rebaixar(str(e))
+        if classe != "nao_informado" and not evidencia_existe(c.trecho_fonte, documento):
+            return CampoFinal(valor="nao_informado", status="encontrado", trecho_fonte=c.trecho_fonte,
+                              motivo=f"'{classe}' sem trecho do laudo que a sustente")
+        return CampoFinal(valor=classe, status=c.status, trecho_fonte=c.trecho_fonte)
+
     # A partir daqui o campo TEM valor: exige evidência literal no laudo
-    if nome != "onus_situacao" and not evidencia_existe(c.trecho_fonte, documento):
-        return CampoFinal(status="nao_verificado", trecho_fonte=c.trecho_fonte,
-                          motivo="trecho_fonte não encontrado no laudo")
+    if not evidencia_existe(c.trecho_fonte, documento):
+        return rebaixar("trecho_fonte não encontrado no laudo (ou curto demais)")
     try:
         if c.status == "contraditorio":
             brutos = c.valores_conflitantes or []
-            if len(brutos) < 2:
-                raise ValueError("contraditório com menos de dois valores")
+            if len({palavras(v) for v in brutos}) < 2:
+                raise ValueError("contraditório com menos de dois valores diferentes")
+            fora = [v for v in brutos if not contido(v, documento)]
+            if fora:
+                raise ValueError(f"valores conflitantes que não estão no laudo: {fora}")
             valor = [_converter(nome, v, "encontrado", ano_vistoria) for v in brutos]
         else:
             if not c.valor_texto:
                 raise ValueError("status com valor, mas valor_texto vazio")
+            # o valor precisa estar DENTRO do trecho citado (categorias são classificações)
+            if nome not in CATEGORICOS and not valor_no_trecho(nome, c.valor_texto, c.trecho_fonte):
+                raise ValueError("valor_texto não aparece no trecho_fonte citado")
+            if not ancorado(nome, c.trecho_fonte):
+                raise ValueError(f"trecho_fonte não fala de {nome}")
             valor = _converter(nome, c.valor_texto, c.status, ano_vistoria)
     except ValueError as e:
         return CampoFinal(status="nao_verificado", trecho_fonte=c.trecho_fonte, motivo=str(e))

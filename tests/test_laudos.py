@@ -203,3 +203,54 @@ def test_uf_inexistente_falha():               # N8: antes qualquer par de letra
     with pytest.raises(ValueError):
         nz._converter("uf", "XY", "encontrado", None)
     assert nz._converter("uf", "sp", "encontrado", None) == "SP"
+
+
+# ---------------------------------------------------------------- chutes que passavam pela evidência (revisão)
+def _campo(laudo, **campo):
+    return nz.normalizar_resposta(_resposta(**campo), (LAUDOS / f"{laudo}.txt").read_text(encoding="utf-8"))[list(campo)[0]]
+
+
+@pytest.mark.parametrize("laudo, campo", [
+    # C1: valor inventado citando um trecho real
+    ("laudo_08", {"matricula": {"valor_texto": "12345", "status": "encontrado",
+                                "trecho_fonte": "Avaliadora responsável: Luciana Prado - CNAI 12345."}}),
+    ("laudo_01", {"valor_avaliacao": {"valor_texto": "R$ 700.000,00", "status": "encontrado",
+                                      "trecho_fonte": "Valor de avaliação: R$ 642.000,00"}}),
+    # C3: inferido fora do ano (área somada; UF "deduzida")
+    ("laudo_03", {"area_total_m2": {"valor_texto": "73 m²", "status": "inferido",
+                                    "trecho_fonte": "Área útil 54,8 m²; área comum proporcional 18,2 m²."}}),
+    ("laudo_06", {"uf": {"valor_texto": "SP", "status": "inferido", "trecho_fonte": "Recife/PE"}}),
+    # C3: contraditório com um valor que não existe no laudo
+    ("laudo_17", {"area_total_m2": {"valor_texto": None, "status": "contraditorio",
+                                    "trecho_fonte": "porém a tabela interna registra 92 m²",
+                                    "valores_conflitantes": ["95 m²", "120 m²"]}}),
+    # N5: trecho curto demais
+    ("laudo_06", {"uf": {"valor_texto": "PE", "status": "encontrado", "trecho_fonte": "PE"}}),
+])
+def test_chute_com_evidencia_falsa_e_rebaixado(laudo, campo):
+    c = _campo(laudo, **campo)
+    assert c.status == "nao_verificado" and c.valor is None
+
+
+def test_sem_onus_sem_trecho_vira_nao_informado():   # C2: antes aceitava sem_onus em laudo silencioso
+    c = _campo("laudo_14", onus_situacao={"valor_texto": "sem_onus", "status": "encontrado", "trecho_fonte": None})
+    assert (c.valor, c.status) == ("nao_informado", "encontrado")
+
+
+def test_sem_onus_com_trecho_real_e_mantido():
+    c = _campo("laudo_01", onus_situacao={"valor_texto": "sem_onus", "status": "encontrado",
+                                          "trecho_fonte": "Ônus: não foram identificados ônus na certidão analisada."})
+    assert c.valor == "sem_onus"
+
+
+def test_endereco_sem_cidade_nao_contiguo_e_aceito():
+    c = _campo("laudo_10", endereco={"valor_texto": "Condomínio Parque Norte, SQN 214, bloco C, apto 407",
+                                     "status": "encontrado",
+                                     "trecho_fonte": "Bem avaliando: apartamento no Condomínio Parque Norte, Brasília/DF, SQN 214, bloco C, apto 407."})
+    assert c.status == "encontrado"
+
+
+def test_endereco_com_numero_trocado_e_rebaixado():
+    c = _campo("laudo_01", endereco={"valor_texto": "Rua das Acácias, 154, ap. 82 - Vila Mariana", "status": "encontrado",
+                                     "trecho_fonte": "Endereço: Rua das Acácias, 145, ap. 82 - Vila Mariana, São Paulo/SP"})
+    assert c.status == "nao_verificado"
