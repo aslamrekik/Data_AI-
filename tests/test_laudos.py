@@ -254,3 +254,28 @@ def test_endereco_com_numero_trocado_e_rebaixado():
     c = _campo("laudo_01", endereco={"valor_texto": "Rua das Acácias, 154, ap. 82 - Vila Mariana", "status": "encontrado",
                                      "trecho_fonte": "Endereço: Rua das Acácias, 145, ap. 82 - Vila Mariana, São Paulo/SP"})
     assert c.status == "nao_verificado"
+
+
+# ---------------------------------------------------------------- critério do avaliador (revisão)
+@pytest.mark.parametrize("campo, esperado, obtido, ok", [
+    # A1: erros que a similaridade 0,85 contava como acerto
+    ("responsavel_registro", "CREA-SP 5061234567", "CREA-SP 5061234568", False),
+    ("endereco", "Rua das Acácias, 145, ap. 82 - Vila Mariana", "Rua das Acácias, 154, ap. 82 - Vila Mariana", False),
+    ("responsavel_nome", "Marina Albuquerque", "Mariana Albuquerque", False),
+    ("responsavel_registro", "CREA-SP 5061234567", "CREA SP 5061234567", True),
+    # A3: mesma informação em outra ordem (antes erro_valor)
+    ("endereco", "Rua do Sol, 250, unidade comercial 14", "Unidade comercial 14, Rua do Sol, 250", True),
+    ("endereco", "SQN 214, bloco C, apto 407 - Condomínio Parque Norte",
+                 "Condomínio Parque Norte, SQN 214, bloco C, apto 407", True),
+    # A5: contraditório com a mesma tolerância do valor único
+    ("area_total_m2", [95.0, 92.0], [95.2, 92.0], True),
+    ("area_total_m2", [95.0, 92.0], [95.0, 92.0, 92.0], False),
+])
+def test_equivalencia_revisada(campo, esperado, obtido, ok):
+    assert av.equivale(campo, esperado, obtido) is ok
+
+
+def test_laudo_que_falhou_nao_ganha_acerto():            # A4: antes dava 16,9% sem extrair nada
+    ext = {k: LaudoExtraido.vazio(f"{k}.txt", "m", "TimeoutError").model_dump() for k in GABARITO["laudos"]}
+    r = av.resumo(av.avaliar(GABARITO, ext))
+    assert r["acurácia (valor)"] == 0 and r["laudos com falha na extração"] == len(GABARITO["laudos"])

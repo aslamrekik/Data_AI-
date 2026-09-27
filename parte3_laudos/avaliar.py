@@ -11,9 +11,14 @@ Critério de acerto (por campo):
       abstencao     se não deu valor (errou para o lado seguro).
   Equivalência de valores:
       números: diferença de até 0,5%;   datas, anos, UF, matrícula, categorias: iguais;
-      textos livres: similaridade >= 0,85 depois de tirar caixa, acento e pontuação;
-      contraditório: o mesmo conjunto de valores.
+      registro profissional: igual, ignorando espaços e pontuação;
+      textos livres: os NÚMEROS têm de ser idênticos (145 != 154) e as palavras
+        (sem caixa, acento e pontuação, sem importar a ordem) têm de coincidir em
+        pelo menos 80% (palavras em comum / tamanho do maior conjunto);
+      contraditório: o mesmo conjunto de valores, cada um com a tolerância de 0,5%.
   Status: reportado à parte ("acerto estrito" = valor certo E status igual).
+  Laudo que falhou na extração (campo "erro" preenchido, ou ausente): todos os
+  campos contam como "falha_extracao", nunca como acerto.
 
 Uso:
     python parte3_laudos/avaliar.py
@@ -23,13 +28,12 @@ from __future__ import annotations
 import json
 import re
 import sys
-from difflib import SequenceMatcher
 from pathlib import Path
 
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from normalizar import compactar  # noqa: E402
+from normalizar import compactar, palavras  # noqa: E402
 from schema import CAMPOS  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -38,6 +42,8 @@ SEM_VALOR = {"nao_informado", "nao_aplicavel", "nao_verificado"}
 NUMERICOS = {"area_privativa_m2", "area_total_m2", "area_construida_m2", "area_terreno_m2",
              "valor_avaliacao"}
 EXATOS = {"ano_construcao", "data_vistoria", "uf", "matricula", "tipo_imovel", "onus_situacao"}
+TOLERANCIA = 0.005
+SIMILARIDADE_MIN = 0.80
 
 
 def tabela_md(df: pd.DataFrame, index: bool = True) -> str:
@@ -50,23 +56,40 @@ def tabela_md(df: pd.DataFrame, index: bool = True) -> str:
     return "\n".join([cab, sep, *corpo])
 
 
+def _num_igual(e, o) -> bool:
+    try:
+        e, o = float(e), float(o)
+    except (TypeError, ValueError):
+        return False
+    return abs(e - o) <= TOLERANCIA * max(abs(e), 1)
+
+
+def _texto_equivale(esperado: str, obtido: str) -> bool:
+    a, b = palavras(esperado).split(), palavras(obtido).split()
+    if sorted(t for t in a if t.isdigit()) != sorted(t for t in b if t.isdigit()):
+        return False                              # número de endereço/registro errado nunca é acerto
+    pa, pb = set(a), set(b)
+    return bool(pa or pb) and len(pa & pb) / max(len(pa), len(pb)) >= SIMILARIDADE_MIN
+
+
 def equivale(campo: str, esperado, obtido) -> bool:
     if isinstance(esperado, list) or isinstance(obtido, list):
-        if not (isinstance(esperado, list) and isinstance(obtido, list)):
+        if not (isinstance(esperado, list) and isinstance(obtido, list)) or len(esperado) != len(obtido):
             return False
-        return sorted(map(float, esperado)) == sorted(map(float, obtido)) if campo in NUMERICOS \
-            else sorted(map(str, esperado)) == sorted(map(str, obtido))
+        if campo in NUMERICOS:
+            try:
+                pares = zip(sorted(map(float, esperado)), sorted(map(float, obtido)))
+            except (TypeError, ValueError):
+                return False
+            return all(_num_igual(e, o) for e, o in pares)
+        return sorted(map(palavras, map(str, esperado))) == sorted(map(palavras, map(str, obtido)))
     if campo in NUMERICOS:
-        try:
-            e, o = float(esperado), float(obtido)
-        except (TypeError, ValueError):
-            return False
-        return abs(e - o) <= 0.005 * max(abs(e), 1)
+        return _num_igual(esperado, obtido)
     if campo in EXATOS:
         return compactar(str(esperado)) == compactar(str(obtido))
-    a = " ".join(re.sub(r"[^\w ]", " ", compactar(str(esperado))).split())
-    b = " ".join(re.sub(r"[^\w ]", " ", compactar(str(obtido))).split())
-    return SequenceMatcher(None, a, b).ratio() >= 0.85
+    if campo == "responsavel_registro":
+        return palavras(str(esperado)).replace(" ", "") == palavras(str(obtido)).replace(" ", "")
+    return _texto_equivale(str(esperado), str(obtido))
 
 
 def classificar(campo: str, g: dict, x: dict) -> str:
@@ -83,10 +106,12 @@ def avaliar(gabarito: dict, extracoes: dict) -> pd.DataFrame:
     linhas = []
     for laudo, g_campos in gabarito["laudos"].items():
         x_laudo = extracoes.get(laudo)
+        falhou = x_laudo is None or bool(x_laudo.get("erro"))
         for campo in CAMPOS:
             g = g_campos[campo]
             x = (x_laudo or {}).get("campos", {}).get(campo) or {"valor": None, "status": "nao_verificado"}
-            resultado = classificar(campo, g, x)
+            # laudo que falhou não ganha acerto nos campos vazios do gabarito
+            resultado = "falha_extracao" if falhou else classificar(campo, g, x)
             linhas.append(dict(
                 laudo=laudo, campo=campo, resultado=resultado,
                 status_gabarito=g["status"], status_extrator=x["status"],
@@ -102,6 +127,7 @@ def resumo(df: pd.DataFrame) -> dict:
     g_sem = df["status_gabarito"].isin(SEM_VALOR)
     return {
         "campos avaliados": len(df),
+        "laudos com falha na extração": int(df.loc[df["resultado"] == "falha_extracao", "laudo"].nunique()),
         "acurácia (valor)": (df["resultado"] == "acerto").mean(),
         "acurácia estrita (valor + status)": ((df["resultado"] == "acerto") & df["status_igual"]).mean(),
         "cobertura (acertos onde o gabarito tem valor)": (df.loc[~g_sem, "resultado"] == "acerto").mean(),
