@@ -49,6 +49,7 @@ CANAIS = {  # chave normalizada (sem acento, minúscula) -> rótulo oficial
 # flag_* extra), a original é preservada como <coluna>_origem.
 COLUNAS_GERADAS = {"ltv", "taxa_juros_am", "contratada", "tempo_confiavel",
                    "etapa_max_funil_original"}
+MONETARIAS = {"valor_imovel", "valor_solicitado", "renda_mensal_declarada"}
 STATUS_VALIDOS = {
     "Contratada", "Desistiu", "Documentação pendente",
     "Problema garantia", "Reprovada crédito", "Sem retorno",
@@ -148,13 +149,25 @@ def _sem_acento(txt: str) -> str:
                    if not unicodedata.combining(ch))
 
 
-def _para_numero(s: pd.Series) -> pd.Series:
-    """Aceita '461158.85', 'R$ 461158.85', '461.158,85' e '461158,85'."""
+def _para_numero(s: pd.Series, milhar: bool = False) -> tuple[pd.Series, pd.Series]:
+    """Converte texto em número e devolve (valores, máscara de formato BR).
+
+    Aceita '461158.85', 'R$ 461158.85', '461.158,85' e '461158,85'.
+    Com milhar=True (colunas em R$, sempre com 2 casas), '571.522' e
+    '2.264.057' são lidos como separador de milhar, não como decimal.
+    """
     t = s.astype(str).str.replace("R$", "", regex=False).str.strip()
     br = t.str.contains(",", regex=False)
+    if milhar:
+        br |= t.str.fullmatch(r"-?\d{1,3}(\.\d{3})+")
     t = t.where(~br, t.str.replace(".", "", regex=False)
                       .str.replace(",", ".", regex=False))
-    return pd.to_numeric(t.replace("", pd.NA), errors="coerce")
+    return pd.to_numeric(t.replace("", pd.NA), errors="coerce"), br
+
+
+def _acao(mascara: pd.Series, acao: str) -> str:
+    """Texto da ação conforme o resultado: nada encontrado não vira 'Flag'."""
+    return acao if mascara.any() else "Verificado; nada a fazer"
 
 
 # --------------------------------------------------------------------------
@@ -221,13 +234,22 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
               "idade_cliente", "renda_mensal_declarada", "flag_cliente_recorrente",
               "etapa_max_funil", "tempo_analise_dias", "taxa_juros_aa"]:
         original = df[c]
-        com_rs = original.str.contains("R$", regex=False)
-        df[c] = _para_numero(original)
+        df[c], fmt_br = _para_numero(original, milhar=c in MONETARIAS)
+        convertido = df[c].notna()
+        com_rs = original.str.contains("R$", regex=False) & convertido
         if com_rs.any():
             reg.add("Número gravado como texto com 'R$'", c, com_rs.sum(),
                     "Removido 'R$' e convertido",
                     "Valor é legítimo; só o formato está errado. Descartar "
                     "perderia a proposta.", df.loc[com_rs, "id_proposta"].tolist())
+        fmt_br &= convertido
+        if fmt_br.any():
+            reg.add("Número em formato brasileiro (milhar '.', decimal ',')", c,
+                    fmt_br.sum(), "Convertido para ponto decimal",
+                    "Mesmo valor, outra notação."
+                    + (" Em R$ (2 casas), '.' seguido de 3 dígitos é milhar."
+                       if c in MONETARIAS else ""),
+                    original[fmt_br].unique().tolist())
         falhou = df[c].isna() & (original != "")
         if falhou.any():
             reg.add("Valor não numérico", c, falhou.sum(), "Virou vazio (NaN)",
@@ -310,15 +332,31 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "reprovada, então não distorce a conversão. Excluir não muda nada.",
             df.loc[menor, "id_proposta"].tolist())
 
-    # 10. Faixas plausíveis (só verificação)
-    for c, lo, hi in [("score_credito", 0, 1000), ("renda_mensal_declarada", 0, None),
-                      ("valor_imovel", 0, None), ("valor_solicitado", 0, None)]:
-        ruim = (df[c] < lo) | ((df[c] > hi) if hi else False)
+    # 10. Faixas plausíveis: fica o valor, entra flag_valor_implausivel
+    implausivel = pd.Series(False, index=df.index)
+    for c, lo, hi, lo_aberto in [("score_credito", 0, 1000, False),
+                                 ("renda_mensal_declarada", 0, None, False),
+                                 ("valor_imovel", 0, None, True),
+                                 ("valor_solicitado", 0, None, True),
+                                 ("idade_cliente", None, 100, False)]:
+        ruim = pd.Series(False, index=df.index)
+        if lo is not None:
+            ruim |= (df[c] <= lo) if lo_aberto else (df[c] < lo)
+        if hi is not None:
+            ruim |= df[c] > hi
+        implausivel |= ruim
+        faixa = (f"{'(-∞' if lo is None else ('(' if lo_aberto else '[') + str(lo)}, "
+                 f"{'∞)' if hi is None else f'{hi}]'}")
         reg.add(f"{c} fora da faixa plausível", c, ruim.sum(),
-                "Verificado" if not ruim.any() else "Flag", f"Faixa [{lo}, {hi or '∞'}].")
+                _acao(ruim, "Mantido + flag_valor_implausivel"), f"Faixa {faixa}.",
+                df.loc[ruim, "id_proposta"].tolist())
     maior = df["valor_solicitado"] > df["valor_imovel"]
+    implausivel |= maior
+    df["flag_valor_implausivel"] = implausivel
     reg.add("Crédito solicitado maior que o imóvel", "valor_solicitado",
-            maior.sum(), "Verificado", "LTV acima de 100% seria erro de cadastro.")
+            maior.sum(), _acao(maior, "Mantido + flag_valor_implausivel"),
+            "LTV acima de 100% seria erro de cadastro.",
+            df.loc[maior, "id_proposta"].tolist())
 
     # 11. Cidade x UF
     uf_mais_comum = df.groupby("cidade")["uf"].agg(lambda s: s.mode().iat[0])
@@ -327,7 +365,8 @@ def tratar(bruto: pd.DataFrame) -> tuple[pd.DataFrame, Registro]:
             "Verificado", "Confere se cada cidade aparece sempre na mesma UF.")
 
     # 12. Coluna ltv (ausente na base atual)
-    df["ltv"] = df["valor_solicitado"] / df["valor_imovel"]
+    # imóvel <= 0 não tem LTV (evita inf); já marcado em flag_valor_implausivel
+    df["ltv"] = df["valor_solicitado"] / df["valor_imovel"].where(df["valor_imovel"] > 0)
     if "ltv_origem" in df:
         origem = pd.to_numeric(df["ltv_origem"], errors="coerce")
         diverge = ~((origem - df["ltv"]).abs() < 1e-4)
