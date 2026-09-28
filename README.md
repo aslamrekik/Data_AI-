@@ -26,9 +26,19 @@ bari_desafio/
 └── DIARIO.md
 ```
 
-## Como executar
+## Instalação
 
-Requer Python >= 3.11.
+Requer Python >= 3.11. Da raiz do repositório:
+
+```
+python -m venv .venv
+.venv\Scripts\activate          # Windows  (Linux/macOS: source .venv/bin/activate)
+pip install -r requirements.txt
+```
+
+O `parte2_relatorio\rodar_relatorio.bat` usa esse `.venv`.
+
+## Como executar
 
 ```
 pip install -r requirements.txt
