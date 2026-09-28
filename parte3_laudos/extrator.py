@@ -71,6 +71,9 @@ Regras por campo:
   depois, pelo código. trecho_fonte = a linha onde o tipo aparece.
 - endereco: copie como está escrito no laudo, NA MESMA ORDEM, retirando só cidade, UF e CEP.
   Não reordene nem complete (logradouro, número, complemento e bairro podem vir em qualquer ordem).
+  O complemento inclui a identificação da unidade (apto, sala, loja, unidade, bloco, conjunto e
+  o número dela), mesmo quando vem junto do tipo do imóvel ou antes do logradouro: em
+  "Sala 3, Av. Exemplo, 100" o endereço é "Sala 3, Av. Exemplo, 100", não "Av. Exemplo, 100".
 - cidade e uf: uf é a sigla de 2 letras.
 - Áreas, conforme o tipo:
     apartamento e sala/unidade comercial em edifício: area_privativa_m2 e area_total_m2

@@ -833,3 +833,13 @@ def test_renormalizar_gemini_le_o_bruto_sem_sufixo(saida_tmp):
     (saida_tmp / "brutas/laudo_01.json").write_text(r.model_dump_json(), encoding="utf-8")
     novos = ex.renormalizar([LAUDOS / "laudo_01.txt"], "gemini", {}, "gemini-2.5-flash")
     assert novos["laudo_01"]["erro"] is None and novos["laudo_01"]["modelo"] == "gemini-2.5-flash"
+
+
+def test_prompt_manda_manter_a_unidade_no_endereco():
+    """Rodada real: laudo_16 'Unidade comercial 14, Rua do Sol, 250' virou 'Rua do Sol, 250'."""
+    assert "O complemento inclui a identificação da unidade" in ex.INSTRUCOES
+    assert "Rua do Sol" not in ex.INSTRUCOES                  # exemplo genérico, não o da prova
+    # copiado na ordem do laudo, o endereço com a unidade é acerto
+    assert av.equivale("endereco", GABARITO["laudos"]["laudo_16"]["endereco"]["valor"],
+                       "Unidade comercial 14, Rua do Sol, 250")
+    assert not av.equivale("endereco", GABARITO["laudos"]["laudo_16"]["endereco"]["valor"], "Rua do Sol, 250")
