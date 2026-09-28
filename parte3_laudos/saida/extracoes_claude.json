@@ -1,0 +1,1756 @@
+{
+  "laudo_01": {
+    "arquivo": "laudo_01.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "apartamento",
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel: apartamento residencial",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua das Acácias, 145, ap. 82 - Vila Mariana",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rua das Acácias, 145, ap. 82 - Vila Mariana, São Paulo/SP",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "São Paulo",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rua das Acácias, 145, ap. 82 - Vila Mariana, São Paulo/SP",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "SP",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rua das Acácias, 145, ap. 82 - Vila Mariana, São Paulo/SP",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 78.4,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa: 78,40 m² | área total: 102,10 m²",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": 102.1,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa: 78,40 m² | área total: 102,10 m²",
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2014,
+        "status": "encontrado",
+        "trecho_fonte": "Ano de construção: 2014",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 642000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor de avaliação: R$ 642.000,00",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "184772",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula: 184.772 do 14º CRI de São Paulo",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "sem_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: não foram identificados ônus na certidão analisada.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "não foram identificados ônus na certidão analisada",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: não foram identificados ônus na certidão analisada.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-03-12",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria realizada em 12/03/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Marina Albuquerque",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Eng. Marina Albuquerque - CREA-SP 5061234567.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-SP 5061234567",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Eng. Marina Albuquerque - CREA-SP 5061234567.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_02": {
+    "arquivo": "laudo_02.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "casa",
+        "status": "encontrado",
+        "trecho_fonte": "Trata-se de uma casa térrea, com 146,00 m2 de área construída, lote de 250 m².",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Av. Central, 900, bloco B",
+        "status": "encontrado",
+        "trecho_fonte": "Localização do bem: Av. Central, 900, bloco B, Belo Horizonte - MG.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Belo Horizonte",
+        "status": "encontrado",
+        "trecho_fonte": "Localização do bem: Av. Central, 900, bloco B, Belo Horizonte - MG.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "MG",
+        "status": "encontrado",
+        "trecho_fonte": "Localização do bem: Av. Central, 900, bloco B, Belo Horizonte - MG.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 146.0,
+        "status": "encontrado",
+        "trecho_fonte": "Trata-se de uma casa térrea, com 146,00 m2 de área construída, lote de 250 m².",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 250.0,
+        "status": "encontrado",
+        "trecho_fonte": "Trata-se de uma casa térrea, com 146,00 m2 de área construída, lote de 250 m².",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2008,
+        "status": "encontrado",
+        "trecho_fonte": "Construída em 2008.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 680000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Estimativa de mercado: seiscentos e oitenta mil reais (R$ 680.000).",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "45981",
+        "status": "encontrado",
+        "trecho_fonte": "Registro imobiliário nº 45.981, Cartório do 3º Ofício.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "sem_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Certidão: sem gravames conhecidos.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "sem gravames conhecidos",
+        "status": "encontrado",
+        "trecho_fonte": "Certidão: sem gravames conhecidos.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-03-18",
+        "status": "encontrado",
+        "trecho_fonte": "Data da inspeção: 18/03/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Carlos Henrique Moura",
+        "status": "encontrado",
+        "trecho_fonte": "Avaliador: Carlos Henrique Moura, CAU A123456-7.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CAU A123456-7",
+        "status": "encontrado",
+        "trecho_fonte": "Avaliador: Carlos Henrique Moura, CAU A123456-7.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_03": {
+    "arquivo": "laudo_03.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "comercial",
+        "status": "encontrado",
+        "trecho_fonte": "Em 22 de março de 2025 vistoriamos a sala comercial 503, Edifício Horizonte, Rua do Comércio, 77, Curitiba/PR.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "sala comercial 503, Edifício Horizonte, Rua do Comércio, 77",
+        "status": "encontrado",
+        "trecho_fonte": "Em 22 de março de 2025 vistoriamos a sala comercial 503, Edifício Horizonte, Rua do Comércio, 77, Curitiba/PR.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Curitiba",
+        "status": "encontrado",
+        "trecho_fonte": "Em 22 de março de 2025 vistoriamos a sala comercial 503, Edifício Horizonte, Rua do Comércio, 77, Curitiba/PR.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "PR",
+        "status": "encontrado",
+        "trecho_fonte": "Em 22 de março de 2025 vistoriamos a sala comercial 503, Edifício Horizonte, Rua do Comércio, 77, Curitiba/PR.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 54.8,
+        "status": "encontrado",
+        "trecho_fonte": "Área útil 54,8 m²; área comum proporcional 18,2 m².",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2014,
+        "status": "inferido",
+        "trecho_fonte": "Idade aparente: 11 anos.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 395500.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor indicado: R$ 395.500,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "77201",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 77.201 - 5º Registro de Imóveis.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "com_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Consta alienação fiduciária em favor de instituição financeira; recomenda-se atualização da certidão.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "Consta alienação fiduciária em favor de instituição financeira; recomenda-se atualização da certidão.",
+        "status": "encontrado",
+        "trecho_fonte": "Consta alienação fiduciária em favor de instituição financeira; recomenda-se atualização da certidão.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-03-22",
+        "status": "encontrado",
+        "trecho_fonte": "Em 22 de março de 2025 vistoriamos a sala comercial 503, Edifício Horizonte, Rua do Comércio, 77, Curitiba/PR.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Beatriz Nunes",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável: Arq. Beatriz Nunes (CAU A987654-3).",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CAU A987654-3",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável: Arq. Beatriz Nunes (CAU A987654-3).",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_04": {
+    "arquivo": "laudo_04.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "terreno",
+        "status": "encontrado",
+        "trecho_fonte": "Tipo: terreno urbano",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Lote 18, Quadra F, Rua Ipê Amarelo",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço do imóvel: Lote 18, Quadra F, Rua Ipê Amarelo, Goiânia/GO",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Goiânia",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço do imóvel: Lote 18, Quadra F, Rua Ipê Amarelo, Goiânia/GO",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "GO",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço do imóvel: Lote 18, Quadra F, Rua Ipê Amarelo, Goiânia/GO",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 360.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do terreno: 360 m2",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": "Ano: não se aplica",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 218000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor de mercado R$ 218.000",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "102334",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 102.334",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_informado",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus e restrições: nada informado no documento apresentado",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-04-02",
+        "status": "encontrado",
+        "trecho_fonte": "Data da vistoria 02/04/2025",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Paulo Sérgio Reis",
+        "status": "encontrado",
+        "trecho_fonte": "RT: Paulo Sérgio Reis, CREA 12345/D-GO",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA 12345/D-GO",
+        "status": "encontrado",
+        "trecho_fonte": "RT: Paulo Sérgio Reis, CREA 12345/D-GO",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_05": {
+    "arquivo": "laudo_05.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "rural",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: imóvel rural denominado Sítio Boa Vista. Município de Campinas, UF SP.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Campinas",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: imóvel rural denominado Sítio Boa Vista. Município de Campinas, UF SP.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "SP",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: imóvel rural denominado Sítio Boa Vista. Município de Campinas, UF SP.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 310.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do terreno: 4,8 ha; benfeitorias construídas: 310 m².",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 48000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do terreno: 4,8 ha; benfeitorias construídas: 310 m².",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 1999,
+        "status": "encontrado",
+        "trecho_fonte": "Ano das edificações: 1999.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 1275000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor total da avaliação: R$ 1.275.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "32110",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 32.110.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "com_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: reserva legal registrada; não foi apontada hipoteca.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "Ônus: reserva legal registrada; não foi apontada hipoteca.",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: reserva legal registrada; não foi apontada hipoteca.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-04-07",
+        "status": "encontrado",
+        "trecho_fonte": "Inspeção em 07/04/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "João A. Farias",
+        "status": "encontrado",
+        "trecho_fonte": "Perito avaliador: João A. Farias, CREA-SP 5076543210.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-SP 5076543210",
+        "status": "encontrado",
+        "trecho_fonte": "Perito avaliador: João A. Farias, CREA-SP 5076543210.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_06": {
+    "arquivo": "laudo_06.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "apartamento",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento situado à Rua das Palmeiras, 1.210, Recife/PE, CEP 50000-100.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua das Palmeiras, 1.210",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento situado à Rua das Palmeiras, 1.210, Recife/PE, CEP 50000-100.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Recife",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento situado à Rua das Palmeiras, 1.210, Recife/PE, CEP 50000-100.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "PE",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento situado à Rua das Palmeiras, 1.210, Recife/PE, CEP 50000-100.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 61.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa 61m² e área total 84m².",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": 84.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa 61m² e área total 84m².",
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2018,
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel com 2018 de construção.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 455000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Avaliação: R$ 455.000,00 (quatrocentos e cinquenta e cinco mil).",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "9876",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula: 9.876, 2º RGI do Recife.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_informado",
+        "status": "encontrado",
+        "trecho_fonte": "Não consta informação sobre ônus.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-04-15",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria: 15/04/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Fernanda Lins",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Fernanda Lins, CREA 18001/PE.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA 18001/PE",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Fernanda Lins, CREA 18001/PE.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_07": {
+    "arquivo": "laudo_07.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "casa",
+        "status": "encontrado",
+        "trecho_fonte": "Casa geminada, Rua Azul, 33, bairro Jardim Europa, Porto Alegre - RS.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua Azul, 33, bairro Jardim Europa",
+        "status": "encontrado",
+        "trecho_fonte": "Casa geminada, Rua Azul, 33, bairro Jardim Europa, Porto Alegre - RS.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Porto Alegre",
+        "status": "encontrado",
+        "trecho_fonte": "Casa geminada, Rua Azul, 33, bairro Jardim Europa, Porto Alegre - RS.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "RS",
+        "status": "encontrado",
+        "trecho_fonte": "Casa geminada, Rua Azul, 33, bairro Jardim Europa, Porto Alegre - RS.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 92.5,
+        "status": "encontrado",
+        "trecho_fonte": "Terreno 125,00 m² / área edificada 92,50 m².",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 125.0,
+        "status": "encontrado",
+        "trecho_fonte": "Terreno 125,00 m² / área edificada 92,50 m².",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2011,
+        "status": "encontrado",
+        "trecho_fonte": "Ano de construção informado pelo proprietário: 2011.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 372000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor venal adotado: R$ 372.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "66504",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 66.504 do Registro de Imóveis da 4ª Zona.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "com_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Há penhora averbada, conforme documento consultado em 20/04/2025.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "Há penhora averbada, conforme documento consultado em 20/04/2025.",
+        "status": "encontrado",
+        "trecho_fonte": "Há penhora averbada, conforme documento consultado em 20/04/2025.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-04-20",
+        "status": "encontrado",
+        "trecho_fonte": "Data da vistoria: 20-04-2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Rafael Costa",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável: Eng. Rafael Costa, CREA-RS 222333.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-RS 222333",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável: Eng. Rafael Costa, CREA-RS 222333.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_08": {
+    "arquivo": "laudo_08.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "comercial",
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel: loja térrea com sobreloja",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua Sete de Setembro, 410",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rua Sete de Setembro, 410, Salvador/BA",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Salvador",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rua Sete de Setembro, 410, Salvador/BA",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "BA",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rua Sete de Setembro, 410, Salvador/BA",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 118.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área construída aproximada: 118 m²",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 910000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor de avaliação R$ 910.000,00",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": "Matrícula não apresentada.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_verificado",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: não foi possível verificar por ausência de certidão.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "não foi possível verificar por ausência de certidão",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: não foi possível verificar por ausência de certidão.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-04-29",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria efetuada em 29/04/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Luciana Prado",
+        "status": "encontrado",
+        "trecho_fonte": "Avaliadora responsável: Luciana Prado - CNAI 12345.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CNAI 12345",
+        "status": "encontrado",
+        "trecho_fonte": "Avaliadora responsável: Luciana Prado - CNAI 12345.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_09": {
+    "arquivo": "laudo_09.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "casa",
+        "status": "encontrado",
+        "trecho_fonte": "Casa residencial na Alameda das Flores 88, Florianópolis/SC.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Alameda das Flores 88",
+        "status": "encontrado",
+        "trecho_fonte": "Casa residencial na Alameda das Flores 88, Florianópolis/SC.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Florianópolis",
+        "status": "encontrado",
+        "trecho_fonte": "Casa residencial na Alameda das Flores 88, Florianópolis/SC.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "SC",
+        "status": "encontrado",
+        "trecho_fonte": "Casa residencial na Alameda das Flores 88, Florianópolis/SC.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 198.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do lote 420,00 m²; área construída 198,00 m².",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 420.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do lote 420,00 m²; área construída 198,00 m².",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2020,
+        "status": "encontrado",
+        "trecho_fonte": "Construção: 2020.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 1080000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor apurado: R$ 1.080.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "12909",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 12.909, 1º Ofício.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "sem_onus",
+        "status": "encontrado",
+        "trecho_fonte": "A certidão indica inexistência de ônus reais.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "A certidão indica inexistência de ônus reais.",
+        "status": "encontrado",
+        "trecho_fonte": "A certidão indica inexistência de ônus reais.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-05-03",
+        "status": "encontrado",
+        "trecho_fonte": "Inspeção presencial em 03/05/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Thiago Martins",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Eng. Thiago Martins, CREA-SC 7654321.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-SC 7654321",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Eng. Thiago Martins, CREA-SC 7654321.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_10": {
+    "arquivo": "laudo_10.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "apartamento",
+        "status": "encontrado",
+        "trecho_fonte": "Bem avaliando: apartamento no Condomínio Parque Norte, Brasília/DF, SQN 214, bloco C, apto 407.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "SQN 214, bloco C, apto 407",
+        "status": "encontrado",
+        "trecho_fonte": "Bem avaliando: apartamento no Condomínio Parque Norte, Brasília/DF, SQN 214, bloco C, apto 407.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Brasília",
+        "status": "encontrado",
+        "trecho_fonte": "Bem avaliando: apartamento no Condomínio Parque Norte, Brasília/DF, SQN 214, bloco C, apto 407.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "DF",
+        "status": "encontrado",
+        "trecho_fonte": "Bem avaliando: apartamento no Condomínio Parque Norte, Brasília/DF, SQN 214, bloco C, apto 407.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 96.3,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa 96,3 m².",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": 127.6,
+        "status": "encontrado",
+        "trecho_fonte": "Área total 127,6 m².",
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2016,
+        "status": "encontrado",
+        "trecho_fonte": "Ano de conclusão 2016.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 735000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor de mercado: R$ 735.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "201443",
+        "status": "encontrado",
+        "trecho_fonte": "Registro: matrícula 201.443.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "com_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Gravames: alienação fiduciária mencionada na matrícula.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "Gravames: alienação fiduciária mencionada na matrícula.",
+        "status": "encontrado",
+        "trecho_fonte": "Gravames: alienação fiduciária mencionada na matrícula.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-05-09",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria em 09/05/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Denise Carvalho",
+        "status": "encontrado",
+        "trecho_fonte": "Perita: Denise Carvalho, CREA-DF 112233.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-DF 112233",
+        "status": "encontrado",
+        "trecho_fonte": "Perita: Denise Carvalho, CREA-DF 112233.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_11": {
+    "arquivo": "laudo_11.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "terreno",
+        "status": "encontrado",
+        "trecho_fonte": "Terreno para incorporação localizado na Rua Projetada 4, s/n, Santos, SP.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua Projetada 4, s/n",
+        "status": "encontrado",
+        "trecho_fonte": "Terreno para incorporação localizado na Rua Projetada 4, s/n, Santos, SP.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Santos",
+        "status": "encontrado",
+        "trecho_fonte": "Terreno para incorporação localizado na Rua Projetada 4, s/n, Santos, SP.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "SP",
+        "status": "encontrado",
+        "trecho_fonte": "Terreno para incorporação localizado na Rua Projetada 4, s/n, Santos, SP.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 1020.0,
+        "status": "encontrado",
+        "trecho_fonte": "Superfície: 1.020 m2.",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": "Sem edificação; ano de construção: inexistente.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 2450000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Avaliação final R$ 2.450.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "88710",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 88.710.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_informado",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus reais não informados.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-05-16",
+        "status": "encontrado",
+        "trecho_fonte": "Data do levantamento: 16/05/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Marcos Vieira",
+        "status": "encontrado",
+        "trecho_fonte": "Elaborado por: Marcos Vieira, Eng. Civil, CREA-SP 5099988776.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-SP 5099988776",
+        "status": "encontrado",
+        "trecho_fonte": "Elaborado por: Marcos Vieira, Eng. Civil, CREA-SP 5099988776.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_12": {
+    "arquivo": "laudo_12.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "casa",
+        "status": "encontrado",
+        "trecho_fonte": "Tipo de propriedade: casa de alto padrão",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua das Bromélias, 500, Lago Sul",
+        "status": "encontrado",
+        "trecho_fonte": "Local: Rua das Bromélias, 500, Lago Sul, Brasília - DF",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Brasília",
+        "status": "encontrado",
+        "trecho_fonte": "Local: Rua das Bromélias, 500, Lago Sul, Brasília - DF",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "DF",
+        "status": "encontrado",
+        "trecho_fonte": "Local: Rua das Bromélias, 500, Lago Sul, Brasília - DF",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 285.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área construída de 285 m² e terreno com 600 m²",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 600.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área construída de 285 m² e terreno com 600 m²",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2012,
+        "status": "encontrado",
+        "trecho_fonte": "Ano informado: 2012",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 2180000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Preço/valor de avaliação: R$ 2.180.000,00",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "54122",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 54.122.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "com_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: servidão de passagem registrada.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "servidão de passagem registrada",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: servidão de passagem registrada.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-05-23",
+        "status": "encontrado",
+        "trecho_fonte": "Data da visita técnica 23/05/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Andréa Melo",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável pelo trabalho: Arq. Andréa Melo, CAU A445566-1.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CAU A445566-1",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável pelo trabalho: Arq. Andréa Melo, CAU A445566-1.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_13": {
+    "arquivo": "laudo_13.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "apartamento",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento, Av. Brasil 1770, ap. 1201, Rio de Janeiro/RJ.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Av. Brasil 1770, ap. 1201",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento, Av. Brasil 1770, ap. 1201, Rio de Janeiro/RJ.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Rio de Janeiro",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento, Av. Brasil 1770, ap. 1201, Rio de Janeiro/RJ.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "RJ",
+        "status": "encontrado",
+        "trecho_fonte": "Apartamento, Av. Brasil 1770, ap. 1201, Rio de Janeiro/RJ.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 112.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área útil: 112,00m². Área total: 155,00m².",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": 155.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área útil: 112,00m². Área total: 155,00m².",
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 1987,
+        "status": "encontrado",
+        "trecho_fonte": "Ano de construção: 1987.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 1320000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor estimado em R$ 1.320.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "145230",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 145.230 do 7º RGI.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "sem_onus",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: penhora cancelada, conforme averbação; documento não informa data do cancelamento.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "penhora cancelada, conforme averbação; documento não informa data do cancelamento",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: penhora cancelada, conforme averbação; documento não informa data do cancelamento.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-05-30",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria 30/05/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Eduardo Sampaio",
+        "status": "encontrado",
+        "trecho_fonte": "Avaliador: Eduardo Sampaio, CNAI 67890.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CNAI 67890",
+        "status": "encontrado",
+        "trecho_fonte": "Avaliador: Eduardo Sampaio, CNAI 67890.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_14": {
+    "arquivo": "laudo_14.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "galpao",
+        "status": "encontrado",
+        "trecho_fonte": "Identificação: galpão industrial",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rodovia BR-116, km 12",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rodovia BR-116, km 12, Betim/MG",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Betim",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rodovia BR-116, km 12, Betim/MG",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "MG",
+        "status": "encontrado",
+        "trecho_fonte": "Endereço: Rodovia BR-116, km 12, Betim/MG",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 1450.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área coberta: 1.450 m²; terreno: 3.000 m²",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 3000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área coberta: 1.450 m²; terreno: 3.000 m²",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2007,
+        "status": "inferido",
+        "trecho_fonte": "Idade: aproximadamente 18 anos",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 3900000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor indicado pelo método comparativo: R$ 3.900.000",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "70008",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula: 70.008",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_informado",
+        "status": "encontrado",
+        "trecho_fonte": "Não há menção a ônus.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-06-05",
+        "status": "encontrado",
+        "trecho_fonte": "Data da vistoria: 05/06/2025",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Sérgio Tavares",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável: Sérgio Tavares, CREA-MG 998877.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-MG 998877",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável: Sérgio Tavares, CREA-MG 998877.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_15": {
+    "arquivo": "laudo_15.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "casa",
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel residencial: casa, Rua Monte Verde, 19, Curitiba-PR.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua Monte Verde, 19",
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel residencial: casa, Rua Monte Verde, 19, Curitiba-PR.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Curitiba",
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel residencial: casa, Rua Monte Verde, 19, Curitiba-PR.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "PR",
+        "status": "encontrado",
+        "trecho_fonte": "Imóvel residencial: casa, Rua Monte Verde, 19, Curitiba-PR.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": 135.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do terreno 200 m², área construída 135 m².",
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": 200.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área do terreno 200 m², área construída 135 m².",
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2003,
+        "status": "encontrado",
+        "trecho_fonte": "Ano 2003.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 590000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Avaliação apresentada em R$ 590.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "39240",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 39.240.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "com_onus",
+        "status": "encontrado",
+        "trecho_fonte": "A certidão consultada informa hipoteca ativa.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "A certidão consultada informa hipoteca ativa.",
+        "status": "encontrado",
+        "trecho_fonte": "A certidão consultada informa hipoteca ativa.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-06-12",
+        "status": "encontrado",
+        "trecho_fonte": "Inspeção: 12/06/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Patrícia Gomes",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Patrícia Gomes, Eng. Civil, CREA-PR 123123.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-PR 123123",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Patrícia Gomes, Eng. Civil, CREA-PR 123123.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_16": {
+    "arquivo": "laudo_16.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "comercial",
+        "status": "encontrado",
+        "trecho_fonte": "Unidade comercial 14, Rua do Sol, 250, Campinas/SP.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Unidade comercial 14, Rua do Sol, 250",
+        "status": "encontrado",
+        "trecho_fonte": "Unidade comercial 14, Rua do Sol, 250, Campinas/SP.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "Campinas",
+        "status": "encontrado",
+        "trecho_fonte": "Unidade comercial 14, Rua do Sol, 250, Campinas/SP.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "SP",
+        "status": "encontrado",
+        "trecho_fonte": "Unidade comercial 14, Rua do Sol, 250, Campinas/SP.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 42.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa: 42,00 m². Área total: 67,00m².",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": 67.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa: 42,00 m². Área total: 67,00m².",
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2010,
+        "status": "encontrado",
+        "trecho_fonte": "Construído em 2010.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 288000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor de avaliação: R$ 288.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "101010",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 101.010.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_informado",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: sem informação.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": null,
+        "status": "nao_informado",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-06-19",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria realizada em 19/06/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Guilherme Rocha",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Guilherme Rocha, CREA-SP 501010.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-SP 501010",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Guilherme Rocha, CREA-SP 501010.",
+        "motivo": null
+      }
+    }
+  },
+  "laudo_17": {
+    "arquivo": "laudo_17.txt",
+    "modelo": "claude-sonnet-5",
+    "erro": null,
+    "campos": {
+      "tipo_imovel": {
+        "valor": "apartamento",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: apartamento residencial na Rua Harmonia, 44, Vila Madalena, São Paulo/SP.",
+        "motivo": null
+      },
+      "endereco": {
+        "valor": "Rua Harmonia, 44, Vila Madalena",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: apartamento residencial na Rua Harmonia, 44, Vila Madalena, São Paulo/SP.",
+        "motivo": null
+      },
+      "cidade": {
+        "valor": "São Paulo",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: apartamento residencial na Rua Harmonia, 44, Vila Madalena, São Paulo/SP.",
+        "motivo": null
+      },
+      "uf": {
+        "valor": "SP",
+        "status": "encontrado",
+        "trecho_fonte": "Objeto: apartamento residencial na Rua Harmonia, 44, Vila Madalena, São Paulo/SP.",
+        "motivo": null
+      },
+      "area_privativa_m2": {
+        "valor": 70.0,
+        "status": "encontrado",
+        "trecho_fonte": "Área privativa 70 m².",
+        "motivo": null
+      },
+      "area_total_m2": {
+        "valor": [
+          95.0,
+          92.0
+        ],
+        "status": "contraditorio",
+        "trecho_fonte": "No cabeçalho consta área total 95 m², porém a tabela interna registra 92 m²; manter a divergência para conferência.",
+        "motivo": null
+      },
+      "area_construida_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "area_terreno_m2": {
+        "valor": null,
+        "status": "nao_aplicavel",
+        "trecho_fonte": null,
+        "motivo": null
+      },
+      "ano_construcao": {
+        "valor": 2015,
+        "status": "encontrado",
+        "trecho_fonte": "Ano de construção: 2015.",
+        "motivo": null
+      },
+      "valor_avaliacao": {
+        "valor": 610000.0,
+        "status": "encontrado",
+        "trecho_fonte": "Valor de avaliação: R$ 610.000,00.",
+        "motivo": null
+      },
+      "matricula": {
+        "valor": "176543",
+        "status": "encontrado",
+        "trecho_fonte": "Matrícula 176.543.",
+        "motivo": null
+      },
+      "onus_situacao": {
+        "valor": "nao_verificado",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: não há ônus, segundo declaração do proprietário; certidão não anexada.",
+        "motivo": null
+      },
+      "onus_descricao": {
+        "valor": "não há ônus, segundo declaração do proprietário; certidão não anexada",
+        "status": "encontrado",
+        "trecho_fonte": "Ônus: não há ônus, segundo declaração do proprietário; certidão não anexada.",
+        "motivo": null
+      },
+      "data_vistoria": {
+        "valor": "2025-06-25",
+        "status": "encontrado",
+        "trecho_fonte": "Vistoria em 25/06/2025.",
+        "motivo": null
+      },
+      "responsavel_nome": {
+        "valor": "Marina Albuquerque",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Marina Albuquerque, CREA-SP 5061234567.",
+        "motivo": null
+      },
+      "responsavel_registro": {
+        "valor": "CREA-SP 5061234567",
+        "status": "encontrado",
+        "trecho_fonte": "Responsável técnico: Marina Albuquerque, CREA-SP 5061234567.",
+        "motivo": null
+      }
+    }
+  }
+}
