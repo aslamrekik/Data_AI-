@@ -463,7 +463,8 @@ def _resposta_perfeita(laudo):
     g = GABARITO["laudos"][laudo]
     tipo, trecho_tipo = ORACULO_TIPO[laudo]
     classe, trecho_onus = ORACULO_ONUS.get(laudo, ("nao_informado", None))
-    r = {"tipo_imovel": {"valor_texto": tipo, "status": "encontrado", "trecho_fonte": trecho_tipo},
+    # o prompt pede o tipo copiado do laudo; a categoria (tipo) sai do código
+    r = {"tipo_imovel": {"valor_texto": TIPO_COPIADO[laudo], "status": "encontrado", "trecho_fonte": trecho_tipo},
          "onus_situacao": {"valor_texto": classe, "status": "encontrado", "trecho_fonte": trecho_onus}}
     for campo in CAMPOS:
         if campo in r:
@@ -843,3 +844,16 @@ def test_prompt_manda_manter_a_unidade_no_endereco():
     assert av.equivale("endereco", GABARITO["laudos"]["laudo_16"]["endereco"]["valor"],
                        "Unidade comercial 14, Rua do Sol, 250")
     assert not av.equivale("endereco", GABARITO["laudos"]["laudo_16"]["endereco"]["valor"], "Rua do Sol, 250")
+
+
+def test_tipo_copiado_precisa_estar_no_trecho():
+    doc = (LAUDOS / "laudo_08.txt").read_text(encoding="utf-8")
+    trecho = "Imóvel: loja térrea com sobreloja"
+    campo = lambda v: nz.normalizar_campo("tipo_imovel", CampoLLM(valor_texto=v, status="encontrado",
+                                                                  trecho_fonte=trecho), doc, None)
+    assert campo("loja térrea com sobreloja").valor == "comercial"
+    assert campo("comercial").status == "nao_verificado"         # categoria exata fora do trecho
+    assert campo("galpão").motivo == "tipo copiado não aparece no trecho citado"
+    doc16 = (LAUDOS / "laudo_16.txt").read_text(encoding="utf-8")   # categoria exata no trecho: aceita
+    c = CampoLLM(valor_texto="comercial", status="encontrado", trecho_fonte="Unidade comercial 14, Rua do Sol, 250")
+    assert nz.normalizar_campo("tipo_imovel", c, doc16, None).valor == "comercial"

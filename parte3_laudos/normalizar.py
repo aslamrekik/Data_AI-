@@ -283,6 +283,10 @@ def normalizar_campo(nome: str, c: CampoLLM, documento: str,
             motivo = f"{MOTIVO_LOCALIZADA}; o LLM citou {c.trecho_fonte!r}"
     elif not evidencia_existe(trecho, documento):
         return rebaixar("trecho_fonte não encontrado no laudo (ou curto demais)")
+    elif nome == "tipo_imovel" and c.status != "contraditorio" \
+            and not valor_no_trecho(nome, c.valor_texto or "", trecho):
+        # o tipo é copiado do laudo: tem de estar na linha citada (senão é chute com trecho real)
+        return rebaixar("tipo copiado não aparece no trecho citado")
     try:
         if c.status == "contraditorio":
             brutos = c.valores_conflitantes or []
