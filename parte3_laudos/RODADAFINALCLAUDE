@@ -1,0 +1,120 @@
+# Parte 3 — Execução final do extrator com a Claude (17 de 17 laudos)
+
+> **Resultado final da Parte 3.** Execução de 28/09/2026 com o modelo `claude-sonnet-5`,
+> usando o prompt final. Os arquivos gerados estão em
+> `parte3_laudos/saida/extracoes_claude.json` e `parte3_laudos/saida/avaliacao_claude.md`.
+> A primeira execução, com o Gemini e interrompida pela cota, está registrada em
+> `docs/parte3_rodada1_cota_esgotada.md`.
+
+## Resultado
+
+| Métrica | Valor |
+|---|---|
+| Laudos extraídos | 17 de 17 |
+| Acurácia | 98,5% (268 de 272 campos) |
+| Alucinações (valor onde o laudo não tem nenhum) | 0 |
+| Abstenção correta (disse "não sei" onde o campo não existe) | 100% |
+| Erros de valor | 2 |
+| Abstenções (não sabia e não chutou) | 2 |
+
+Todos os casos difíceis dos laudos foram tratados corretamente:
+- **Laudo 17:** a área total contraditória saiu como `contraditorio`, com os dois valores (95 e 92 m²).
+- **Laudo 08:** a matrícula não apresentada saiu como `nao_informado`.
+- **Laudo 13:** a penhora cancelada saiu como `sem_onus`.
+- **Laudos 03 e 14:** o ano foi calculado a partir da idade, com status `inferido`.
+- **Laudo 05:** a área em hectares foi convertida para m².
+- **Laudos 04 e 11:** o ano dos terrenos saiu como `nao_aplicavel`.
+
+## Os 4 campos que não bateram
+
+Nenhum deles é um valor inventado. Em todos, o problema é de interpretação ou de rigidez do critério, não de leitura errada do laudo.
+
+| Laudo e campo | Gabarito | Extrator | Leitura |
+|---|---|---|---|
+| 02, `onus_descricao` | "Certidão: sem gravames conhecidos" | "sem gravames conhecidos" | Mesmo conteúdo; o extrator tirou o rótulo "Certidão:". O critério de similaridade de texto foi rígido demais para uma frase tão curta. |
+| 10, `endereco` | "SQN 214, bloco C, apto 407 - Condomínio Parque Norte" | "SQN 214, bloco C, apto 407" | O extrator omitiu o nome do condomínio, que no laudo aparece antes da cidade. A unidade dada em garantia está identificada. |
+| 05, `endereco` | "Sítio Boa Vista" | não informado | Imóvel rural sem logradouro. O gabarito aceitou a denominação como endereço; o extrator não. O próprio gabarito já marcava esse caso como discutível. |
+| 08, `ano_construcao` | 2005 (inferido) | não informado | O laudo diz "Ano de referência: 2005", sem dizer que é o ano de construção. O extrator não arriscou, o que é o comportamento pedido pelo desafio. |
+
+Decisão: não ajustei o prompt nem o gabarito para os laudos 05 e 08. Ajustar o prompt a esses dois casos seria ensinar o extrator a concordar com escolhas discutíveis do gabarito, e mudar o gabarito depois de ver o resultado seria mover a trave depois do chute.
+
+## Histórico das execuções
+
+| Execução | Modelo | Laudos extraídos | Acurácia nos extraídos | Alucinações |
+|---|---|---|---|---|
+| 1ª, interrompida pela cota | gemini-2.5-flash | 4 de 17 | 90,6% | 0 |
+| 2ª, interrompida pela cota | gemini-3.6-flash | 11 de 17 | 98,9% | 0 |
+| 3ª, prompt antigo | claude-sonnet-5 | 17 de 17 | 95,2% | 0 |
+| 3ª renormalizada, sem nova chamada à API | claude-sonnet-5 | 17 de 17 | 98,9% | 0 |
+| **4ª, final, prompt final** | **claude-sonnet-5** | **17 de 17** | **98,5%** | **0** |
+
+O que cada passo mudou:
+- **Da 1ª para a 2ª:** tratamento da cota diária, retomada sem sobrescrever resultados bons e evidência pela linha inteira do laudo.
+- **Da 3ª para a renormalizada:** 10 das 12 abstenções eram o tipo de imóvel copiado literalmente ("apartamento residencial"). O prompt tinha duas instruções contraditórias para esse campo. A classificação passou para o código, que mapeia o texto para a categoria por palavras-chave, e o `--renormalizar` refez tudo a partir das respostas salvas, sem chamar a API.
+- **Da renormalizada para a final:** entrou uma regra genérica para o complemento da unidade no endereço. O laudo 16, que perdia "Unidade comercial 14", passou a acertar. Em compensação, os laudos 02 e 10 passaram a divergir em detalhes de texto.
+
+## Limitações
+
+- **Os mesmos 17 laudos serviram para desenvolver o prompt e para medir o resultado.** Como o prompt foi ajustado depois de ver os erros, os 98,5% são otimistas. Com laudos novos, o resultado tende a ser menor.
+- **O resultado varia entre execuções.** Mudar uma regra do prompt corrigiu um laudo e alterou outros dois. Um LLM não é determinístico mesmo com temperatura 0, o que reforça a necessidade de avaliar sempre contra o gabarito.
+- **O gabarito foi rascunhado com a Claude**, revisado pelo Claude Code e validado por mim nos casos difíceis. O extrator final também é a Claude, o que torna a avaliação mais circular. O Gemini, que não participou do gabarito, chegou a 98,9% nos 11 laudos que extraiu, o que indica que o resultado não depende de a mesma família de modelo estar dos dois lados.
+
+---
+
+*Abaixo, o relatório original gerado pelo `avaliar.py` na execução final, sem edição.*
+
+# Avaliação da extração de laudos
+
+Critério de acerto: ver docstring de avaliar.py. Alucinação é o erro mais grave.
+
+## Resumo
+
+| Métrica | Valor |
+|---|---|
+| campos avaliados | 272 |
+| laudos com falha na extração | 0 |
+| acurácia (valor) | 98.5% |
+| acurácia nos laudos extraídos | 98.5% |
+| acurácia estrita (valor + status) | 98.5% |
+| cobertura (acertos onde o gabarito tem valor) | 98.2% |
+| abstenção correta (onde o gabarito não tem valor) | 100.0% |
+| alucinações (valor onde não existe) | 0 |
+| erros de valor | 2 |
+| abstenções (não sabia, errou para o lado seguro) | 2 |
+| campos aceitos com evidência localizada pelo código | 0 |
+
+## Por campo
+
+| campo | abstencao | acerto | erro_valor | acurácia |
+|---|---|---|---|---|
+| tipo_imovel | 0 | 17 | 0 | 100% |
+| endereco | 1 | 15 | 1 | 88% |
+| cidade | 0 | 17 | 0 | 100% |
+| uf | 0 | 17 | 0 | 100% |
+| area_privativa_m2 | 0 | 17 | 0 | 100% |
+| area_total_m2 | 0 | 17 | 0 | 100% |
+| area_construida_m2 | 0 | 17 | 0 | 100% |
+| area_terreno_m2 | 0 | 17 | 0 | 100% |
+| ano_construcao | 1 | 16 | 0 | 94% |
+| valor_avaliacao | 0 | 17 | 0 | 100% |
+| matricula | 0 | 17 | 0 | 100% |
+| onus_situacao | 0 | 17 | 0 | 100% |
+| onus_descricao | 0 | 16 | 1 | 94% |
+| data_vistoria | 0 | 17 | 0 | 100% |
+| responsavel_nome | 0 | 17 | 0 | 100% |
+| responsavel_registro | 0 | 17 | 0 | 100% |
+
+## Evidência localizada pelo código
+
+O LLM citou só o valor; o código achou a única linha do laudo que contém o valor e fala do campo. Contam como acerto ou erro normalmente.
+
+Nenhum.
+
+## Campos que não bateram
+
+| laudo | campo | resultado | status_gabarito | status_extrator | esperado | obtido | motivo |
+|---|---|---|---|---|---|---|---|
+| laudo_02 | onus_descricao | erro_valor | encontrado | encontrado | "Certidão: sem gravames conhecidos" | "sem gravames conhecidos" |  |
+| laudo_05 | endereco | abstencao | encontrado | nao_informado | "Sítio Boa Vista" | null |  |
+| laudo_08 | ano_construcao | abstencao | inferido | nao_informado | 2005 | null |  |
+| laudo_10 | endereco | erro_valor | encontrado | encontrado | "SQN 214, bloco C, apto 407 - Condomínio Parque Norte" | "SQN 214, bloco C, apto 407" |  |
