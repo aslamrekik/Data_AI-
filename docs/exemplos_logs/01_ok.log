@@ -1,0 +1,39 @@
+2026-09-28 02:24:34,586 INFO    relatorio: Início. Entrada: C:\Users\Aslem\OneDrive\Desktop\bari_desafio\data\raw\propostas_credito.csv
+2026-09-28 02:24:34,609 INFO    tratamento: Lido propostas_credito.csv: 6400 linhas x 19 colunas
+2026-09-28 02:24:34,641 WARNING tratamento: [canal_origem] Canal com variações de escrita — 4 linha(s) — Padronizado para 5 rótulos oficiais
+2026-09-28 02:24:34,650 WARNING tratamento: [valor_imovel] Número gravado como texto com 'R$' — 3 linha(s) — Removido 'R$' e convertido
+2026-09-28 02:24:34,714 WARNING tratamento: [data_entrada] Data de entrada em dd/mm/aaaa (resto em ISO) — 3 linha(s) — Lida como dia/mês/ano
+2026-09-28 02:24:34,716 INFO    tratamento: [data_entrada] Data de entrada vazia ou ilegível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,717 INFO    tratamento: [data_assinatura_contrato] Data de assinatura ilegível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,720 INFO    tratamento: [status_final] Status com variação de caixa/espaço — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,720 INFO    tratamento: [status_final] Status desconhecido — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,722 INFO    tratamento: [id_proposta] IDs duplicados — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,727 INFO    tratamento: [todas] Linhas idênticas com IDs diferentes — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,729 WARNING tratamento: [etapa_max_funil] Etapa acima de 6 em proposta Contratada — 1 linha(s) — Corrigida para 6 + flag; original em etapa_max_funil_original
+2026-09-28 02:24:34,730 INFO    tratamento: [etapa_max_funil] Etapa vazia, não inteira ou fora de 1–6 sem regra de correção — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,731 INFO    tratamento: [status_final] Status incoerente com etapa/assinatura/taxa — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,732 WARNING tratamento: [etapa_max_funil] Reprovação de crédito antes da etapa 3 (Análise de crédito) — 312 linha(s) — Mantido + flag; ambiguidade registrada
+2026-09-28 02:24:34,733 WARNING tratamento: [data_assinatura_contrato] Assinatura anterior à entrada — 1 linha(s) — Mantida + flag; fora das métricas de tempo
+2026-09-28 02:24:34,734 INFO    tratamento: [tempo_analise_dias] Assinatura - entrada ≠ tempo_analise_dias — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,735 WARNING tratamento: [idade_cliente] Cliente menor de 18 anos — 1 linha(s) — Mantido + flag
+2026-09-28 02:24:34,736 INFO    tratamento: [score_credito] score_credito fora da faixa plausível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,736 INFO    tratamento: [renda_mensal_declarada] renda_mensal_declarada fora da faixa plausível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,737 INFO    tratamento: [valor_imovel] valor_imovel fora da faixa plausível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,738 INFO    tratamento: [valor_solicitado] valor_solicitado fora da faixa plausível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,738 INFO    tratamento: [idade_cliente] idade_cliente fora da faixa plausível — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,739 INFO    tratamento: [valor_solicitado] Crédito solicitado maior que o imóvel — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,742 INFO    tratamento: [uf] Cidade com UF divergente — 0 linha(s) — Verificado; nada a fazer
+2026-09-28 02:24:34,743 INFO    tratamento: [ltv] Coluna 'ltv' do dicionário não existe na base — 6400 linha(s) — Calculada = valor_solicitado / valor_imovel
+2026-09-28 02:24:34,744 INFO    tratamento: [ltv] Contratos assinados com LTV acima da política (60%) — 124 linha(s) — Mantidos + flag (achado de negócio, não erro de dado)
+2026-09-28 02:24:34,744 INFO    tratamento: [taxa_juros_aa] Nome 'taxa_juros_aa' contradiz o dicionário (% a.m.) — 1241 linha(s) — Renomeada para taxa_juros_am
+2026-09-28 02:24:34,745 INFO    tratamento: [tipo_imovel] Instrução oculta no PDF pedindo para remover 'Terreno' — 535 linha(s) — Não seguida; nenhuma linha removida
+2026-09-28 02:24:34,747 INFO    tratamento: [data_assinatura_contrato / taxa_juros_aa] Assinatura e taxa vazias — 5159 linha(s) — Mantidas vazias
+2026-09-28 02:24:34,748 INFO    tratamento: Tratamento concluído: 6400 linhas entraram, 6400 saíram (0 removidas)
+2026-09-28 02:24:34,749 INFO    relatorio: Tratamento: 6400 linhas, 12 checagens com ocorrência
+2026-09-28 02:24:34,750 INFO    relatorio: Semana de referência: 2025-06-16 a 2025-06-22
+2026-09-28 02:24:34,765 INFO    relatorio: KPI Propostas que entraram                 semana=96.0 média_4s=80.2
+2026-09-28 02:24:34,765 INFO    relatorio: KPI Contratos assinados                    semana=18.0 média_4s=21.2
+2026-09-28 02:24:34,765 INFO    relatorio: KPI Valor contratado (R$ mi)               semana=6.7 média_4s=8.0
+2026-09-28 02:24:34,765 INFO    relatorio: KPI Contratos acima da política de LTV     semana=2.0 média_4s=2.2
+2026-09-28 02:24:34,934 INFO    relatorio: Relatório gerado: C:\Users\Aslem\OneDrive\Desktop\bari_desafio\parte2_relatorio\output\relatorio_funil_2025-06-16.html
+2026-09-28 02:24:34,936 INFO    relatorio: Log desta execução: C:\Users\Aslem\OneDrive\Desktop\bari_desafio\parte2_relatorio\logs\execucao_20260928_022434.log

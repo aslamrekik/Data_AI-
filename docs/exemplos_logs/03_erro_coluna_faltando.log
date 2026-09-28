@@ -1,0 +1,4 @@
+2026-09-28 02:26:15,595 INFO    relatorio: Início. Entrada: ..\teste_sem_coluna.csv
+2026-09-28 02:26:15,617 INFO    tratamento: Lido teste_sem_coluna.csv: 6400 linhas x 18 colunas
+2026-09-28 02:26:15,617 ERROR   relatorio: Entrada inválida: Colunas obrigatórias ausentes: score_credito. Verifique se a extração mudou de layout.. Nenhum relatório foi gerado.
+2026-09-28 02:26:15,618 INFO    relatorio: Log desta execução: C:\Users\Aslem\OneDrive\Desktop\bari_desafio\parte2_relatorio\logs\execucao_20260928_022615.log

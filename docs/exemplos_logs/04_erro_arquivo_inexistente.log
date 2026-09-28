@@ -1,0 +1,3 @@
+2026-09-28 02:26:40,823 INFO    relatorio: Início. Entrada: ..\nao_existe.csv
+2026-09-28 02:26:40,823 ERROR   relatorio: Entrada inválida: Arquivo não encontrado: ..\nao_existe.csv. Nenhum relatório foi gerado.
+2026-09-28 02:26:40,823 INFO    relatorio: Log desta execução: C:\Users\Aslem\OneDrive\Desktop\bari_desafio\parte2_relatorio\logs\execucao_20260928_022640.log
