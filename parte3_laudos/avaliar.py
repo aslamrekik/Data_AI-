@@ -25,6 +25,7 @@ Uso:
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -177,20 +178,37 @@ def relatorio_md(df: pd.DataFrame, r: dict) -> str:
     return "\n".join(linhas) + "\n"
 
 
+def nomes_saida(extracoes: Path) -> tuple[Path, Path]:
+    """extracoes.json -> avaliacao.md; extracoes_<nome>.json -> avaliacao_<nome>.md
+    (outro nome de arquivo -> avaliacao_<arquivo>.md). O CSV de detalhe segue o mesmo sufixo."""
+    stem = extracoes.stem
+    nome = stem.removeprefix("extracoes_") if stem.startswith("extracoes_") else \
+        ("" if stem == "extracoes" else stem)
+    sufixo = f"_{nome}" if nome else ""
+    return (BASE / f"saida/avaliacao{sufixo}.md", BASE / f"saida/avaliacao_detalhe{sufixo}.csv")
+
+
 def main() -> None:
-    gab = json.loads((BASE / "gabarito.json").read_text(encoding="utf-8"))
-    arq = BASE / "saida/extracoes.json"
+    p = argparse.ArgumentParser(description="Compara a extração com o gabarito.")
+    p.add_argument("--extracoes", type=Path, default=BASE / "saida/extracoes.json",
+                   help="JSON do extrator (ex.: parte3_laudos/saida/extracoes_claude.json; "
+                        "só o nome procura em parte3_laudos/saida/)")
+    a = p.parse_args()
+    arq = a.extracoes
+    if not arq.exists() and not arq.is_absolute() and (BASE / "saida" / arq).exists():
+        arq = BASE / "saida" / arq
     if not arq.exists():
-        sys.exit("Rode antes: python parte3_laudos/extrator.py")
+        sys.exit(f"{arq} não existe. Rode antes: python parte3_laudos/extrator.py")
+    gab = json.loads((BASE / "gabarito.json").read_text(encoding="utf-8"))
     ext = json.loads(arq.read_text(encoding="utf-8"))
     df = avaliar(gab, ext)
     r = resumo(df)
-    df.to_csv(BASE / "saida/avaliacao_detalhe.csv", index=False, encoding="utf-8-sig")
-    (BASE / "saida/avaliacao.md").write_text(relatorio_md(df, r), encoding="utf-8")
+    md, csv = nomes_saida(arq)
+    df.to_csv(csv, index=False, encoding="utf-8-sig")
+    md.write_text(relatorio_md(df, r), encoding="utf-8")
     for k, v in r.items():
         print(f"{k:55s} {_fmt(v)}")
-    print(f"\nDetalhe: {BASE / 'saida/avaliacao.md'}")
-
+    print(f"\nDetalhe: {md}")
 
 if __name__ == "__main__":
     main()

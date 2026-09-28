@@ -15,7 +15,7 @@ bari_desafio/
 │   ├── logs/                  # logs de execução
 │   └── output/                # relatórios gerados
 ├── parte3_laudos/
-│   ├── extrator.py            # extrai campos dos laudos com o Gemini
+│   ├── extrator.py            # extrai campos dos laudos (Gemini ou Claude)
 │   ├── normalizar.py          # converte o texto literal do LLM no formato final
 │   ├── schema.py              # contratos de dados (Pydantic)
 │   ├── gabarito.json          # respostas esperadas
@@ -38,8 +38,10 @@ pytest                     # testes do tratamento
 
 - **Parte 1:** `jupyter notebook parte1_analise.ipynb` (a partir da raiz do projeto)
 - **Parte 2:** `python parte2_relatorio/relatorio_semanal.py` ou `parte2_relatorio\rodar_relatorio.bat`
-- **Parte 3:** copie `.env.example` para `.env` e preencha `GEMINI_API_KEY` (o `.env` nunca vai para o Git). Da raiz do projeto:
+- **Parte 3:** copie `.env.example` para `.env` e preencha `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY` com `PROVEDOR=claude`; o `.env` nunca vai para o Git). Da raiz do projeto:
   ```
   python parte3_laudos/extrator.py            # todos os laudos (ou --laudo laudo_17)
   python parte3_laudos/avaliar.py             # gera parte3_laudos/saida/avaliacao.md
+  # Claude: PROVEDOR=claude no .env (ou --provedor claude) -> saida/extracoes_claude.json
+  python parte3_laudos/avaliar.py --extracoes parte3_laudos/saida/extracoes_claude.json  # -> avaliacao_claude.md
   ```

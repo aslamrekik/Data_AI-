@@ -736,3 +736,11 @@ def test_saida_separada_por_provedor(saida_tmp):
     assert ex.arquivo_extracoes("gemini") == saida_tmp / "extracoes.json"
     assert ex.arquivo_extracoes("claude") == saida_tmp / "extracoes_claude.json"
 
+
+@pytest.mark.parametrize("arquivo, md, csv", [
+    ("extracoes.json", "avaliacao.md", "avaliacao_detalhe.csv"),
+    ("extracoes_claude.json", "avaliacao_claude.md", "avaliacao_detalhe_claude.csv"),
+    ("rodada2.json", "avaliacao_rodada2.md", "avaliacao_detalhe_rodada2.csv"),
+])
+def test_avaliar_nomeia_o_relatorio_pela_extracao(arquivo, md, csv):
+    assert [c.name for c in av.nomes_saida(Path(arquivo))] == [md, csv]
