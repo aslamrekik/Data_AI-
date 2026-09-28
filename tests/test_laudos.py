@@ -11,7 +11,7 @@ sys.path.insert(0, str(RAIZ / "parte3_laudos"))
 
 import avaliar as av  # noqa: E402
 import normalizar as nz  # noqa: E402
-from schema import CAMPOS, LaudoExtraido, RespostaLLM  # noqa: E402
+from schema import CAMPOS, CampoLLM, LaudoExtraido, RespostaLLM  # noqa: E402
 
 LAUDOS = RAIZ / "data/raw/laudos"
 GABARITO = json.loads((RAIZ / "parte3_laudos/gabarito.json").read_text(encoding="utf-8"))
@@ -744,3 +744,53 @@ def test_saida_separada_por_provedor(saida_tmp):
 ])
 def test_avaliar_nomeia_o_relatorio_pela_extracao(arquivo, md, csv):
     assert [c.name for c in av.nomes_saida(Path(arquivo))] == [md, csv]
+
+
+# ---------------------------------------------------------------- tipo_imovel classificado pelo código
+# Texto do tipo como está escrito em cada laudo real (01-05, 07-09, 14 e 17: copiados pela Claude
+# na rodada real, quando a checagem exata os rebaixou).
+TIPO_COPIADO = {
+    "laudo_01": "apartamento residencial", "laudo_02": "casa térrea", "laudo_03": "sala comercial",
+    "laudo_04": "terreno urbano", "laudo_05": "imóvel rural", "laudo_06": "Apartamento",
+    "laudo_07": "Casa geminada", "laudo_08": "loja térrea com sobreloja", "laudo_09": "Casa residencial",
+    "laudo_10": "apartamento", "laudo_11": "Terreno para incorporação", "laudo_12": "casa de alto padrão",
+    "laudo_13": "Apartamento", "laudo_14": "galpão industrial", "laudo_15": "casa",
+    "laudo_16": "Unidade comercial", "laudo_17": "apartamento residencial",
+}
+
+
+@pytest.mark.parametrize("laudo", sorted(TIPO_COPIADO))
+def test_tipo_copiado_do_laudo_real_vira_a_categoria_do_gabarito(laudo):
+    doc = (LAUDOS / f"{laudo}.txt").read_text(encoding="utf-8")
+    c = CampoLLM(valor_texto=TIPO_COPIADO[laudo], status="encontrado", trecho_fonte=ORACULO_TIPO[laudo][1])
+    final = nz.normalizar_campo("tipo_imovel", c, doc, None)
+    assert final.status == "encontrado" and final.valor == GABARITO["laudos"][laudo]["tipo_imovel"]["valor"]
+
+
+@pytest.mark.parametrize("txt, esperado", [
+    ("apartamento", "apartamento"), ("casa", "casa"), ("comercial", "comercial"),   # categoria exata
+    ("galpao", "galpao"), ("terreno", "terreno"), ("rural", "rural"),
+    ("APTO 82", "apartamento"), ("Galpão", "galpao"), ("lote urbano", "terreno"),
+    ("Chácara Recanto", "rural"), ("Fazenda Santa Rita", "rural"), ("Sítio Boa Vista", "rural"),
+    ("loja", "comercial"), ("sala comercial", "comercial"),                          # mesma categoria 2x
+])
+def test_tipo_imovel_por_palavra_chave(txt, esperado):
+    assert nz.tipo_imovel(txt) == esperado
+
+
+@pytest.mark.parametrize("txt", ["imóvel residencial", "", "casa com lote de 250 m²",
+                                 "apartamento ou sala", "casarão"])
+def test_tipo_imovel_sem_categoria_ou_com_duas_falha(txt):
+    with pytest.raises(ValueError):
+        nz.tipo_imovel(txt)
+
+
+def test_tipo_ambiguo_vira_nao_verificado():
+    c = CampoLLM(valor_texto="casa com lote", status="encontrado", trecho_fonte="Tipo: terreno urbano")
+    final = nz.normalizar_campo("tipo_imovel", c, (LAUDOS / "laudo_04.txt").read_text(encoding="utf-8"), None)
+    assert final.status == "nao_verificado" and final.valor is None
+
+
+def test_prompt_pede_para_copiar_o_tipo():
+    assert "copie o tipo como está escrito no laudo" in ex.INSTRUCOES
+

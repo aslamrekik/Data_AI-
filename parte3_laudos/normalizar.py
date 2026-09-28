@@ -194,6 +194,28 @@ def categoria(txt: str, permitidas: list[str]) -> str:
     return c
 
 
+# tipo_imovel é classificado pelo código a partir do texto copiado do laudo
+# (palavra inteira, sem acento e sem diferenciar maiúsculas).
+PALAVRAS_TIPO = {
+    "apartamento": "apartamento", "apto": "apartamento",
+    "casa": "casa",
+    "sala": "comercial", "loja": "comercial", "comercial": "comercial",
+    "galpao": "galpao",
+    "terreno": "terreno", "lote": "terreno",
+    "rural": "rural", "sitio": "rural", "fazenda": "rural", "chacara": "rural",
+}
+
+
+def tipo_imovel(txt: str) -> str:
+    """'apartamento residencial' -> apartamento | 'loja térrea com sobreloja' -> comercial.
+    Nenhuma categoria ou duas categorias diferentes ('casa com lote') -> ValueError."""
+    achadas = {PALAVRAS_TIPO[p] for p in palavras(txt).split() if p in PALAVRAS_TIPO}
+    if len(achadas) != 1:
+        motivo = "nenhuma categoria" if not achadas else f"categorias diferentes {sorted(achadas)}"
+        raise ValueError(f"tipo_imovel {txt!r}: {motivo} (esperado um de {TIPOS_IMOVEL})")
+    return achadas.pop()
+
+
 # ----------------------------------------------------------------------------
 # Campo a campo
 # ----------------------------------------------------------------------------
@@ -212,7 +234,7 @@ def _converter(nome: str, txt: str, status: str, ano_vistoria: int | None):
             raise ValueError(f"UF inválida {txt!r}")
         return uf
     if nome == "tipo_imovel":
-        return categoria(txt, TIPOS_IMOVEL)
+        return tipo_imovel(txt)
     if nome == "onus_situacao":
         return categoria(txt, SITUACOES_ONUS)
     return " ".join(txt.split())  # textos livres

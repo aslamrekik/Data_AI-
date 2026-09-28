@@ -65,8 +65,9 @@ NUNCA invente, complete ou estime um valor. Na dúvida, use nao_informado.
 Um valor plausível sem evidência é o pior erro possível.
 
 Regras por campo:
-- tipo_imovel: escreva exatamente uma destas categorias: apartamento, casa, comercial
-  (sala, loja, unidade comercial), galpao, terreno, rural. trecho_fonte = onde o tipo aparece.
+- tipo_imovel: copie o tipo como está escrito no laudo (ex.: "apartamento residencial",
+  "loja térrea com sobreloja", "galpão industrial"); a classificação em categoria é feita
+  depois, pelo código. trecho_fonte = a linha onde o tipo aparece.
 - endereco: copie como está escrito no laudo, NA MESMA ORDEM, retirando só cidade, UF e CEP.
   Não reordene nem complete (logradouro, número, complemento e bairro podem vir em qualquer ordem).
 - cidade e uf: uf é a sigla de 2 letras.
