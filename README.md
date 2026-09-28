@@ -41,6 +41,7 @@ pytest                     # testes do tratamento
 - **Parte 3:** copie `.env.example` para `.env` e preencha `GEMINI_API_KEY` (ou `ANTHROPIC_API_KEY` com `PROVEDOR=claude`; o `.env` nunca vai para o Git). Da raiz do projeto:
   ```
   python parte3_laudos/extrator.py            # todos os laudos (ou --laudo laudo_17)
+  python parte3_laudos/extrator.py --renormalizar   # refaz a saída a partir de saida/brutas/, sem API
   python parte3_laudos/avaliar.py             # gera parte3_laudos/saida/avaliacao.md
   # Claude: PROVEDOR=claude no .env (ou --provedor claude) -> saida/extracoes_claude.json
   python parte3_laudos/avaliar.py --extracoes parte3_laudos/saida/extracoes_claude.json  # -> avaliacao_claude.md

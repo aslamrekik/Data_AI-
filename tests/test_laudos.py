@@ -794,3 +794,42 @@ def test_tipo_ambiguo_vira_nao_verificado():
 def test_prompt_pede_para_copiar_o_tipo():
     assert "copie o tipo como está escrito no laudo" in ex.INSTRUCOES
 
+
+# ---------------------------------------------------------------- --renormalizar (sem API)
+def _bruto_claude_laudo_01(saida, tipo="apartamento residencial"):
+    _, r = _resposta_perfeita("laudo_01")
+    entrada = json.loads(r.model_dump_json())
+    entrada["tipo_imovel"]["valor_texto"] = tipo
+    (saida / "brutas").mkdir(exist_ok=True)
+    (saida / "brutas/laudo_01_claude.json").write_text(_msg_claude(entrada).model_dump_json(), encoding="utf-8")
+
+
+def test_renormalizar_refaz_a_saida_a_partir_dos_brutos_sem_api(saida_tmp, monkeypatch):
+    monkeypatch.setattr(ex, "cliente_claude", lambda: pytest.fail("não pode chamar a API"))
+    _bruto_claude_laudo_01(saida_tmp)
+    antigo = LaudoExtraido(arquivo="laudo_01.txt", modelo="claude-sonnet-5", campos={}).model_dump()
+    (saida_tmp / "extracoes_claude.json").write_text(json.dumps({"laudo_01": antigo, "laudo_02": antigo}))
+    monkeypatch.setattr(sys, "argv", ["extrator.py", "--provedor", "claude", "--renormalizar"])
+    ex.main()
+    final = json.loads((saida_tmp / "extracoes_claude.json").read_text(encoding="utf-8"))
+    assert final["laudo_01"]["campos"]["tipo_imovel"]["valor"] == "apartamento"
+    assert final["laudo_01"]["modelo"] == "claude-sonnet-5" and final["laudo_01"]["erro"] is None
+    assert final["laudo_02"] == antigo                     # sem bruto: fica como estava
+    df = av.avaliar(GABARITO, {"laudo_01": final["laudo_01"]})
+    assert (df.loc[df["laudo"] == "laudo_01", "resultado"] == "acerto").all()
+
+
+def test_renormalizar_bruto_invalido_nao_apaga_sucesso_anterior(saida_tmp):
+    (saida_tmp / "brutas").mkdir()
+    (saida_tmp / "brutas/laudo_01_claude.json").write_text(_msg_claude(stop_reason="refusal").model_dump_json())
+    ok = LaudoExtraido(arquivo="laudo_01.txt", modelo="m", campos={}).model_dump()
+    novos = ex.renormalizar([LAUDOS / "laudo_01.txt"], "claude", {"laudo_01": ok}, "m")
+    assert novos["laudo_01"]["erro"] and ex.mesclar({"laudo_01": ok}, novos)["laudo_01"] == ok
+
+
+def test_renormalizar_gemini_le_o_bruto_sem_sufixo(saida_tmp):
+    _, r = _resposta_perfeita("laudo_01")
+    (saida_tmp / "brutas").mkdir()
+    (saida_tmp / "brutas/laudo_01.json").write_text(r.model_dump_json(), encoding="utf-8")
+    novos = ex.renormalizar([LAUDOS / "laudo_01.txt"], "gemini", {}, "gemini-2.5-flash")
+    assert novos["laudo_01"]["erro"] is None and novos["laudo_01"]["modelo"] == "gemini-2.5-flash"

@@ -11,6 +11,7 @@ Uso (a partir da raiz do repositório):
     python parte3_laudos/extrator.py                 # todos os laudos
     python parte3_laudos/extrator.py --laudo laudo_17 # um só
     python parte3_laudos/extrator.py --pendentes      # só os que ainda não deram certo
+    python parte3_laudos/extrator.py --renormalizar   # refaz a saída a partir de brutas/, sem API
 
 Provedor: PROVEDOR no .env (gemini | claude; padrão gemini) ou --provedor.
   gemini -> GEMINI_API_KEY, GEMINI_MODEL; saída em saida/extracoes.json
@@ -235,12 +236,25 @@ def interpretar(provedor: str, bruto: str) -> RespostaLLM:
                                 f"(stop_reason={msg.get('stop_reason')})")
 
 
+def arquivo_bruto(stem: str, provedor: str) -> Path:
+    """brutas/laudo_01.json (Gemini) | brutas/laudo_01_claude.json (Claude)."""
+    sufixo = "" if provedor == "gemini" else f"_{provedor}"
+    return DIR_SAIDA / "brutas" / f"{stem}{sufixo}.json"
+
+
+def _montar(caminho: Path, documento: str, resposta: RespostaLLM, modelo: str) -> LaudoExtraido:
+    campos = normalizar_resposta(resposta, documento)
+    rebaixados = [n for n, c in campos.items() if c.status == "nao_verificado"]
+    if rebaixados:
+        log.warning("%s: campos rebaixados para nao_verificado: %s", caminho.stem, rebaixados)
+    return LaudoExtraido(arquivo=caminho.name, modelo=modelo, campos=campos)
+
+
 def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 2,
                   espera: float = 5.0, provedor: str = "gemini") -> LaudoExtraido:
     documento = caminho.read_text(encoding="utf-8")
     DIR_SAIDA.joinpath("brutas").mkdir(parents=True, exist_ok=True)
-    sufixo = "" if provedor == "gemini" else f"_{provedor}"
-    destino_bruto = DIR_SAIDA.joinpath("brutas", f"{caminho.stem}{sufixo}.json")
+    destino_bruto = arquivo_bruto(caminho.stem, provedor)
     ultimo_erro = ""
     for t in range(1, tentativas + 1):
         pausa = espera * t                                          # erro de rede pode pedir mais
@@ -248,11 +262,7 @@ def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 2,
             bruto = CHAMADAS[provedor](cliente, modelo, documento)
             destino_bruto.write_text(bruto, encoding="utf-8")      # salvo antes de validar
             resposta = interpretar(provedor, bruto)
-            campos = normalizar_resposta(resposta, documento)
-            rebaixados = [n for n, c in campos.items() if c.status == "nao_verificado"]
-            if rebaixados:
-                log.warning("%s: campos rebaixados para nao_verificado: %s", caminho.stem, rebaixados)
-            return LaudoExtraido(arquivo=caminho.name, modelo=modelo, campos=campos)
+            return _montar(caminho, documento, resposta, modelo)
         except ValidationError as e:
             ultimo_erro = f"resposta fora do schema: {e.error_count()} erro(s); bruto em {destino_bruto}"
         except RespostaSemFerramenta as e:
@@ -270,6 +280,26 @@ def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 2,
             time.sleep(pausa)
     log.error("%s: desistindo após %d tentativas", caminho.stem, tentativas)
     return LaudoExtraido.vazio(caminho.name, modelo, ultimo_erro)
+
+
+def renormalizar(arquivos: list[Path], provedor: str, anteriores: dict, modelo: str) -> dict:
+    """Refaz a normalização a partir das respostas brutas salvas, sem chamar a API.
+    Laudo sem bruto fica como está; bruto inválido vira falha (e mesclar mantém um sucesso anterior)."""
+    novos = {}
+    for arq in arquivos:
+        caminho_bruto = arquivo_bruto(arq.stem, provedor)
+        if not caminho_bruto.exists():
+            log.warning("%s: sem resposta bruta em %s; mantido como está", arq.stem, caminho_bruto)
+            continue
+        mod = (anteriores.get(arq.stem) or {}).get("modelo") or modelo
+        try:
+            resposta = interpretar(provedor, caminho_bruto.read_text(encoding="utf-8"))
+        except ValueError as e:              # fora do schema, JSON inválido ou sem a ferramenta
+            log.warning("%s: bruto inválido (%s)", arq.stem, str(e)[:200])
+            novos[arq.stem] = LaudoExtraido.vazio(arq.name, mod, f"bruto inválido em {caminho_bruto}").model_dump()
+            continue
+        novos[arq.stem] = _montar(arq, arq.read_text(encoding="utf-8"), resposta, mod).model_dump()
+    return novos
 
 
 def mesclar(anteriores: dict, novos: dict) -> dict:
@@ -305,6 +335,8 @@ def main() -> None:
     p.add_argument("--laudo", help="nome do arquivo sem extensão, ex.: laudo_17")
     p.add_argument("--pendentes", action="store_true",
                    help="extrai só os laudos que ainda não têm extração bem-sucedida")
+    p.add_argument("--renormalizar", action="store_true",
+                   help="refaz a saída do provedor a partir das respostas em brutas/, sem chamar a API")
     p.add_argument("--pausa", type=float, default=4.0,
                    help="segundos entre laudos (respeita o limite do nível gratuito)")
     a = p.parse_args()
@@ -325,8 +357,13 @@ def main() -> None:
             return
     if not arquivos:
         sys.exit(f"Nenhum laudo encontrado em {DIR_LAUDOS}")
-    cliente = cliente_gemini() if provedor == "gemini" else cliente_claude()
     modelo = os.getenv(VAR_MODELO[provedor]) or MODELO_PADRAO[provedor]
+    if a.renormalizar:
+        final = mesclar(anteriores, renormalizar(arquivos, provedor, anteriores, modelo))
+        destino.write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
+        log.info("Renormalizado a partir de %s. Salvo em %s", DIR_SAIDA / "brutas", destino)
+        return
+    cliente = cliente_gemini() if provedor == "gemini" else cliente_claude()
 
     novos, fatal = {}, None
     for i, arq in enumerate(arquivos):
