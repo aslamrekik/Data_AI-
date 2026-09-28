@@ -873,3 +873,14 @@ def test_execucao_interrompida_lista_os_laudos_sem_extracao(saida_tmp, monkeypat
     with caplog.at_level("INFO", logger="extrator"), pytest.raises(SystemExit, match="interrompida"):
         ex.main()
     assert "Laudos ainda sem extração: ['laudo_01']" in caplog.text
+
+
+@pytest.mark.parametrize("conteudo", [{}, {"laudo_01": LaudoExtraido.vazio("laudo_01.txt", "m", "400").model_dump()}])
+def test_avaliar_recusa_arquivo_sem_nenhum_laudo_extraido(tmp_path, monkeypatch, conteudo):
+    arq = tmp_path / "extracoes_teste_vazio.json"
+    arq.write_text(json.dumps(conteudo), encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["avaliar.py", "--extracoes", str(arq)])
+    with pytest.raises(SystemExit, match="nenhum laudo extraído"):
+        av.main()
+    md, csv = av.nomes_saida(arq)
+    assert not md.exists() and not csv.exists()              # nenhum relatório de 0% gravado

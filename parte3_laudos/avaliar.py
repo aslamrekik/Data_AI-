@@ -201,6 +201,10 @@ def main() -> None:
         sys.exit(f"{arq} não existe. Rode antes: python parte3_laudos/extrator.py")
     gab = json.loads((BASE / "gabarito.json").read_text(encoding="utf-8"))
     ext = json.loads(arq.read_text(encoding="utf-8"))
+    if not any(not x.get("erro") for x in ext.values()):
+        # um relatório de 0% aqui pareceria resultado; não grava nada
+        sys.exit(f"{arq}: nenhum laudo extraído ({len(ext)} com falha). Nada a avaliar; "
+                 "rode o extrator de novo (--pendentes).")
     df = avaliar(gab, ext)
     r = resumo(df)
     md, csv = nomes_saida(arq)
