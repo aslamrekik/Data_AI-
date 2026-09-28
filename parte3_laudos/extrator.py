@@ -163,6 +163,7 @@ def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 2,
     destino_bruto = DIR_SAIDA.joinpath("brutas", f"{caminho.stem}.json")
     ultimo_erro = ""
     for t in range(1, tentativas + 1):
+        pausa = espera * t                                          # erro de rede pode pedir mais
         try:
             bruto = chamar_gemini(cliente, modelo, documento)
             destino_bruto.write_text(bruto, encoding="utf-8")      # salvo antes de validar
@@ -182,9 +183,7 @@ def extrair_laudo(caminho: Path, cliente, modelo: str, tentativas: int = 2,
             if _erro_fatal(e):
                 raise ErroFatal(f"{type(e).__name__}: {e}") from e
             ultimo_erro = f"{type(e).__name__}: {e}"
-            pausa = max(espera * t, _espera_sugerida(e))
-        else:
-            pausa = espera * t
+            pausa = max(pausa, _espera_sugerida(e))
         log.warning("%s: tentativa %d/%d falhou (%s)", caminho.stem, t, tentativas, ultimo_erro[:200])
         if t < tentativas:                                          # não espera depois da última
             time.sleep(pausa)

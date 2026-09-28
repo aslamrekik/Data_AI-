@@ -314,6 +314,14 @@ def test_resposta_fora_do_schema_tem_o_bruto_salvo(saida_tmp):        # E1: ante
     assert x.erro and (saida_tmp / "brutas/laudo_01.json").read_text(encoding="utf-8") == "isto não é JSON"
 
 
+def test_resposta_fora_do_schema_tenta_de_novo_sem_quebrar(saida_tmp, monkeypatch):
+    """Antes: UnboundLocalError em 'pausa' (o else do try nunca rodava) na 1ª resposta inválida."""
+    esperas = []
+    monkeypatch.setattr(ex.time, "sleep", esperas.append)
+    cliente = _ClienteFalso(["isto não é JSON", _resposta().model_dump_json()])
+    x = ex.extrair_laudo(LAUDOS / "laudo_01.txt", cliente, "m", tentativas=2, espera=1)
+    assert x.erro is None and esperas == [1]
+
 def test_chave_invalida_para_na_primeira_tentativa(saida_tmp):         # E2: antes 3 tentativas por laudo
     cliente = _ClienteFalso([genai_errors.ClientError(401, {"error": {"message": "API key not valid"}})] * 3)
     with pytest.raises(ex.ErroFatal):
