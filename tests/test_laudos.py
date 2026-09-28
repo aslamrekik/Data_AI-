@@ -857,3 +857,19 @@ def test_tipo_copiado_precisa_estar_no_trecho():
     doc16 = (LAUDOS / "laudo_16.txt").read_text(encoding="utf-8")   # categoria exata no trecho: aceita
     c = CampoLLM(valor_texto="comercial", status="encontrado", trecho_fonte="Unidade comercial 14, Rua do Sol, 250")
     assert nz.normalizar_campo("tipo_imovel", c, doc16, None).valor == "comercial"
+
+
+def test_log_de_pendentes_nao_diz_nenhum_quando_nada_foi_extraido():
+    arquivos = [LAUDOS / f"laudo_0{i}.txt" for i in (1, 2, 3)]
+    assert ex.sem_extracao(arquivos, {}) == ["laudo_01", "laudo_02", "laudo_03"]   # parou no 1º laudo
+    ok, falha = {"erro": None}, {"erro": "503"}
+    final = {"laudo_01": ok, "laudo_02": ok, "laudo_03": ok, "laudo_09": falha}
+    assert ex.sem_extracao(arquivos, final) == ["laudo_09"]                        # falha antiga continua
+
+
+def test_execucao_interrompida_lista_os_laudos_sem_extracao(saida_tmp, monkeypatch, caplog):
+    monkeypatch.setattr(ex, "cliente_claude", lambda: _ClaudeFalsa([_erro_claude(anthropic.BadRequestError, 400)]))
+    monkeypatch.setattr(sys, "argv", ["extrator.py", "--provedor", "claude", "--laudo", "laudo_01"])
+    with caplog.at_level("INFO", logger="extrator"), pytest.raises(SystemExit, match="interrompida"):
+        ex.main()
+    assert "Laudos ainda sem extração: ['laudo_01']" in caplog.text

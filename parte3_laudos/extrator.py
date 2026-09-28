@@ -326,6 +326,12 @@ def arquivo_extracoes(provedor: str) -> Path:
     return DIR_SAIDA / ("extracoes.json" if provedor == "gemini" else f"extracoes_{provedor}.json")
 
 
+def sem_extracao(arquivos: list[Path], final: dict) -> list[str]:
+    """Laudos pedidos nesta execução que não têm extração bem-sucedida, mais as falhas já gravadas.
+    (Antes olhava só o JSON: uma execução interrompida no 1º laudo dizia 'nenhum'.)"""
+    return sorted({a.stem for a in pendentes(arquivos, final)} | {k for k, v in final.items() if v.get("erro")})
+
+
 def main() -> None:
     try:
         from dotenv import load_dotenv
@@ -384,7 +390,7 @@ def main() -> None:
 
     final = mesclar(anteriores, novos)
     destino.write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding="utf-8")
-    falhas = [k for k, v in final.items() if v["erro"]]
+    falhas = sem_extracao(arquivos, final)
     log.info("Salvo em %s. Laudos ainda sem extração: %s", destino, falhas or "nenhum")
     if fatal:
         sys.exit(f"Execução interrompida: {fatal}")
